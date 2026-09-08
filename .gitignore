@@ -4,6 +4,12 @@
 node_modules/
 dist/
 target/
+.expo/
+.expo-shared/
+web-build/
+android/
+ios/
+.eas/
 .idea/
 .vscode/
 *.iml
