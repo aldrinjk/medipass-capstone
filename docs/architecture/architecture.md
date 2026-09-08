@@ -1,0 +1,3 @@
+MediPass is a patient-controlled QR-based emergency health passport. A patient logs in, maintains a small emergency profile (demographics, allergies, medications, active conditions, and an emergency contact), selects which categories may be shared, and generates a time-limited QR pass. An emergency responder scans the QR code without creating an account. The backend validates the pass token, expiry, revocation status, and permitted categories, then returns only the approved emergency summary. Every access is logged. Clinical data is represented using HL7 FHIR R4 and tested only with synthetic/demo patients.
+
+See team handoff documents for detailed module boundaries.

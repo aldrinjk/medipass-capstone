@@ -1,0 +1,3 @@
+# Integration owner (P5) completes this file.
+# Required services: app-postgres, hapi-postgres, hapi-fhir, api; web optional for local compose.
+services: {}

@@ -1,0 +1,146 @@
+openapi: 3.0.3
+info:
+  title: MediPass API
+  version: 1.0.0
+  description: Authoritative capstone API contract. Paths and JSON names require project-lead approval to change.
+servers:
+  - url: http://localhost:8080
+paths:
+  /api/v1/auth/register:
+    post:
+      tags: [Auth]
+      responses: {"201": {description: Registered}}
+  /api/v1/auth/login:
+    post:
+      tags: [Auth]
+      responses: {"200": {description: JWT and refresh token}}
+  /api/v1/auth/refresh:
+    post:
+      tags: [Auth]
+      responses: {"200": {description: New access token}}
+  /api/v1/auth/logout:
+    post:
+      tags: [Auth]
+      security: [{bearerAuth: []}]
+      responses: {"204": {description: Logged out}}
+  /api/v1/auth/me:
+    get:
+      tags: [Auth]
+      security: [{bearerAuth: []}]
+      responses: {"200": {description: Current user}}
+  /api/v1/patients/me:
+    get:
+      tags: [Patient]
+      security: [{bearerAuth: []}]
+      responses: {"200": {description: Patient profile}}
+    put:
+      tags: [Patient]
+      security: [{bearerAuth: []}]
+      responses: {"200": {description: Updated}}
+  /api/v1/patients/me/allergies:
+    get: {tags: [Patient], security: [{bearerAuth: []}], responses: {"200": {description: Allergies}}}
+    post: {tags: [Patient], security: [{bearerAuth: []}], responses: {"201": {description: Allergy created}}}
+  /api/v1/patients/me/allergies/{id}:
+    parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
+    put: {tags: [Patient], security: [{bearerAuth: []}], responses: {"200": {description: Allergy updated}}}
+    delete: {tags: [Patient], security: [{bearerAuth: []}], responses: {"204": {description: Allergy deleted}}}
+  /api/v1/patients/me/medications:
+    get: {tags: [Patient], security: [{bearerAuth: []}], responses: {"200": {description: Medications}}}
+    post: {tags: [Patient], security: [{bearerAuth: []}], responses: {"201": {description: Medication created}}}
+  /api/v1/patients/me/medications/{id}:
+    parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+    put: {tags: [Patient], security: [{bearerAuth: []}], responses: {"200": {description: Medication updated}}}
+    delete: {tags: [Patient], security: [{bearerAuth: []}], responses: {"204": {description: Medication deleted}}}
+  /api/v1/patients/me/conditions:
+    get: {tags: [Patient], security: [{bearerAuth: []}], responses: {"200": {description: Conditions}}}
+    post: {tags: [Patient], security: [{bearerAuth: []}], responses: {"201": {description: Condition created}}}
+  /api/v1/patients/me/conditions/{id}:
+    parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+    put: {tags: [Patient], security: [{bearerAuth: []}], responses: {"200": {description: Condition updated}}}
+    delete: {tags: [Patient], security: [{bearerAuth: []}], responses: {"204": {description: Condition deleted}}}
+  /api/v1/patients/me/emergency-contact:
+    get: {tags: [Patient], security: [{bearerAuth: []}], responses: {"200": {description: Emergency contact}}}
+    put: {tags: [Patient], security: [{bearerAuth: []}], responses: {"200": {description: Emergency contact updated}}}
+  /api/v1/patients/me/sharing-preferences:
+    get: {tags: [Pass], security: [{bearerAuth: []}], responses: {"200": {description: Preferences}}}
+    put: {tags: [Pass], security: [{bearerAuth: []}], responses: {"200": {description: Preferences updated}}}
+  /api/v1/passes:
+    post:
+      tags: [Pass]
+      security: [{bearerAuth: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CreatePassRequest'}
+      responses:
+        "201":
+          description: Pass created
+          content: {application/json: {schema: {$ref: '#/components/schemas/CreatePassResponse'}}}
+    get: {tags: [Pass], security: [{bearerAuth: []}], responses: {"200": {description: Patient passes}}}
+  /api/v1/passes/{passId}:
+    parameters: [{name: passId, in: path, required: true, schema: {type: string, format: uuid}}]
+    get: {tags: [Pass], security: [{bearerAuth: []}], responses: {"200": {description: Pass metadata}}}
+  /api/v1/passes/{passId}/revoke:
+    parameters: [{name: passId, in: path, required: true, schema: {type: string, format: uuid}}]
+    post: {tags: [Pass], security: [{bearerAuth: []}], responses: {"200": {description: Pass revoked}}}
+  /api/v1/passes/{passId}/rotate:
+    parameters: [{name: passId, in: path, required: true, schema: {type: string, format: uuid}}]
+    post: {tags: [Pass], security: [{bearerAuth: []}], responses: {"200": {description: New public URL; prior token invalidated}}}
+  /api/v1/public/passes/{token}:
+    parameters: [{name: token, in: path, required: true, schema: {type: string}}]
+    get:
+      tags: [Public]
+      responses:
+        "200": {description: Filtered emergency summary}
+        "404": {description: Invalid pass}
+        "410": {description: Revoked or expired pass}
+  /api/v1/patients/me/access-logs:
+    get: {tags: [Audit], security: [{bearerAuth: []}], responses: {"200": {description: Access history}}}
+  /api/v1/patients/me/access-logs/{id}:
+    parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
+    get: {tags: [Audit], security: [{bearerAuth: []}], responses: {"200": {description: Access detail}}}
+  /api/v1/patients/me/fhir-bundle:
+    get: {tags: [FHIR], security: [{bearerAuth: []}], responses: {"200": {description: FHIR R4 emergency Bundle}}}
+  /api/v1/admin/metrics:
+    get: {tags: [Admin], security: [{bearerAuth: []}], responses: {"200": {description: Metrics}}}
+  /api/v1/admin/passes:
+    get: {tags: [Admin], security: [{bearerAuth: []}], responses: {"200": {description: Search passes}}}
+  /api/v1/admin/access-logs:
+    get: {tags: [Admin], security: [{bearerAuth: []}], responses: {"200": {description: Search access logs}}}
+  /api/v1/admin/synthea/import:
+    post: {tags: [FHIR, Admin], security: [{bearerAuth: []}], responses: {"201": {description: Synthetic data imported}}}
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    CreatePassRequest:
+      type: object
+      required: [categories, expiresAt]
+      properties:
+        categories:
+          type: array
+          uniqueItems: true
+          items: {$ref: '#/components/schemas/ShareCategory'}
+        expiresAt: {type: string, format: date-time}
+    CreatePassResponse:
+      type: object
+      required: [passId, status, expiresAt, publicUrl, categories]
+      properties:
+        passId: {type: string, format: uuid}
+        status: {$ref: '#/components/schemas/PassStatus'}
+        expiresAt: {type: string, format: date-time}
+        publicUrl: {type: string, format: uri}
+        categories: {type: array, items: {$ref: '#/components/schemas/ShareCategory'}}
+    ShareCategory:
+      type: string
+      enum: [DEMOGRAPHICS, ALLERGIES, MEDICATIONS, CONDITIONS, EMERGENCY_CONTACT]
+    PassStatus:
+      type: string
+      enum: [ACTIVE, REVOKED, EXPIRED]
+    AccessOutcome:
+      type: string
+      enum: [SUCCESS, EXPIRED, REVOKED, INVALID]
