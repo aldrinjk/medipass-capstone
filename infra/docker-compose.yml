@@ -1,3 +1,5 @@
 # Integration owner (P5) completes this file.
-# Required services: app-postgres, hapi-postgres, hapi-fhir, api; web optional for local compose.
+# Hosted Supabase PostgreSQL is external and is NOT an app-postgres service here.
+# Local compose should focus on HAPI FHIR and supporting local services needed by the API.
+# An optional local PostgreSQL profile may be added for offline development only.
 services: {}
