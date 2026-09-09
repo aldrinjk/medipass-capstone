@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -48,19 +49,80 @@ public class EmergencyPassService {
         );
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public List<PassMetadataResponse> listPasses(UUID userId) {
+        Instant now = Instant.now();
         return repository.findAllByUserIdOrderByCreatedAtDesc(userId)
                 .stream()
-                .map(this::toMetadataResponse)
+                .map(pass -> {
+                    expireIfNeeded(pass, now);
+                    return toMetadataResponse(pass);
+                })
                 .toList();
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public PassMetadataResponse getPass(UUID userId, UUID passId) {
         EmergencyPass pass = repository.findByIdAndUserId(passId, userId)
                 .orElseThrow(PassNotFoundException::new);
+        expireIfNeeded(pass, Instant.now());
         return toMetadataResponse(pass);
+    }
+
+    @Transactional
+    public PassMetadataResponse revokePass(UUID userId, UUID passId) {
+        EmergencyPass pass = repository.findByIdAndUserId(passId, userId)
+                .orElseThrow(PassNotFoundException::new);
+
+        Instant now = Instant.now();
+
+        if (expireIfNeeded(pass, now)) {
+            return toMetadataResponse(repository.saveAndFlush(pass));
+        }
+
+        pass.revoke(now);
+        EmergencyPass saved = repository.saveAndFlush(pass);
+        return toMetadataResponse(saved);
+    }
+
+    @Transactional(noRollbackFor = PassLifecycleException.class)
+    public RotatePassResponse rotatePass(UUID userId, UUID passId) {
+        EmergencyPass pass = repository.findByIdAndUserId(passId, userId)
+                .orElseThrow(PassNotFoundException::new);
+
+        Instant now = Instant.now();
+
+        if (expireIfNeeded(pass, now)) {
+            repository.saveAndFlush(pass);
+            throw new PassLifecycleException("Expired passes cannot be rotated.");
+        }
+
+        if (pass.getStatus() != PassStatus.ACTIVE) {
+            throw new PassLifecycleException("Only an active pass can be rotated.");
+        }
+
+        String rawToken = passTokenService.generateToken();
+        String newTokenHash = passTokenService.hashToken(rawToken);
+        pass.rotateToken(newTokenHash, now);
+
+        EmergencyPass saved = repository.saveAndFlush(pass);
+        String publicUrl = publicResponderWebBaseUrl + "/passes/" + rawToken;
+
+        return new RotatePassResponse(
+                saved.getId(),
+                saved.getStatus(),
+                saved.getExpiresAt(),
+                publicUrl,
+                saved.getCategories()
+        );
+    }
+
+    private boolean expireIfNeeded(EmergencyPass pass, Instant now) {
+        if (pass.getStatus() == PassStatus.ACTIVE && !pass.getExpiresAt().isAfter(now)) {
+            pass.expire(now);
+            return true;
+        }
+        return false;
     }
 
     private PassMetadataResponse toMetadataResponse(EmergencyPass pass) {
