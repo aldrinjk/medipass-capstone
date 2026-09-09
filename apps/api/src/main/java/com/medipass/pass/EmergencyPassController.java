@@ -49,6 +49,14 @@ public class EmergencyPassController {
         return ResponseEntity.ok(service.getPass(userId(authentication), passId));
     }
 
+    @PostMapping("/{passId}/revoke")
+    public ResponseEntity<PassMetadataResponse> revokePass(
+            Authentication authentication,
+            @PathVariable UUID passId
+    ) {
+        return ResponseEntity.ok(service.revokePass(userId(authentication), passId));
+    }
+
     private UUID userId(Authentication authentication) {
         return UUID.fromString(authentication.getName());
     }
