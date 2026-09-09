@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -61,6 +62,23 @@ public class EmergencyPassService {
         EmergencyPass pass = repository.findByIdAndUserId(passId, userId)
                 .orElseThrow(PassNotFoundException::new);
         return toMetadataResponse(pass);
+    }
+
+    @Transactional
+    public PassMetadataResponse revokePass(UUID userId, UUID passId) {
+        EmergencyPass pass = repository.findByIdAndUserId(passId, userId)
+                .orElseThrow(PassNotFoundException::new);
+
+        Instant now = Instant.now();
+
+        if (pass.getStatus() == PassStatus.ACTIVE && !pass.getExpiresAt().isAfter(now)) {
+            pass.expire(now);
+        } else {
+            pass.revoke(now);
+        }
+
+        EmergencyPass saved = repository.saveAndFlush(pass);
+        return toMetadataResponse(saved);
     }
 
     private PassMetadataResponse toMetadataResponse(EmergencyPass pass) {
