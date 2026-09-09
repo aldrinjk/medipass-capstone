@@ -2,6 +2,8 @@ package com.medipass.patient;
 
 import com.medipass.patient.dto.AllergyDto;
 import com.medipass.patient.dto.AllergyRequest;
+import com.medipass.patient.dto.MedicationDto;
+import com.medipass.patient.dto.MedicationRequest;
 import com.medipass.patient.dto.PatientProfileDto;
 import com.medipass.patient.dto.UpdatePatientProfileRequest;
 
@@ -16,4 +18,9 @@ public interface ClinicalService {
     AllergyDto createAllergy(UUID userId, AllergyRequest request);
     AllergyDto updateAllergy(UUID userId, UUID allergyId, AllergyRequest request);
     void deleteAllergy(UUID userId, UUID allergyId);
+
+    List<MedicationDto> getMedications(UUID userId);
+    MedicationDto createMedication(UUID userId, MedicationRequest request);
+    MedicationDto updateMedication(UUID userId, UUID medicationId, MedicationRequest request);
+    void deleteMedication(UUID userId, UUID medicationId);
 }
