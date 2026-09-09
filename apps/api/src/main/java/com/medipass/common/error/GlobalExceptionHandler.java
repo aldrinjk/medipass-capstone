@@ -1,5 +1,6 @@
 package com.medipass.common.error;
 
+import com.medipass.auth.EmailAlreadyRegisteredException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import java.util.LinkedHashMap;
@@ -46,6 +47,21 @@ public class GlobalExceptionHandler {
                         HttpStatus.BAD_REQUEST.value(),
                         "VALIDATION_ERROR",
                         "Request validation failed.",
+                        request.getRequestURI()
+                )
+        );
+    }
+
+    @ExceptionHandler(EmailAlreadyRegisteredException.class)
+    public ResponseEntity<ApiError> handleEmailAlreadyRegistered(
+            EmailAlreadyRegisteredException ex,
+            HttpServletRequest request
+    ) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                ApiError.of(
+                        HttpStatus.CONFLICT.value(),
+                        "EMAIL_ALREADY_REGISTERED",
+                        ex.getMessage(),
                         request.getRequestURI()
                 )
         );
