@@ -57,6 +57,14 @@ public class EmergencyPassController {
         return ResponseEntity.ok(service.revokePass(userId(authentication), passId));
     }
 
+    @PostMapping("/{passId}/rotate")
+    public ResponseEntity<RotatePassResponse> rotatePass(
+            Authentication authentication,
+            @PathVariable UUID passId
+    ) {
+        return ResponseEntity.ok(service.rotatePass(userId(authentication), passId));
+    }
+
     private UUID userId(Authentication authentication) {
         return UUID.fromString(authentication.getName());
     }
