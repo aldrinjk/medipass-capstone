@@ -45,6 +45,16 @@ public class RefreshToken {
         this.expiresAt = expiresAt;
     }
 
+    public void revoke() {
+        if (this.revokedAt == null) {
+            this.revokedAt = Instant.now();
+        }
+    }
+
+    public boolean isUsable() {
+        return revokedAt == null && expiresAt.isAfter(Instant.now());
+    }
+
     public UUID getId() { return id; }
     public User getUser() { return user; }
     public String getTokenHash() { return tokenHash; }
