@@ -1,5 +1,8 @@
 package com.medipass.pass;
 
+import com.medipass.audit.AccessOutcome;
+import com.medipass.audit.PassAccessLog;
+import com.medipass.audit.PassAccessLogRepository;
 import com.medipass.auth.User;
 import com.medipass.auth.UserRepository;
 import com.medipass.patient.ClinicalService;
@@ -17,10 +20,14 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
 import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -48,10 +55,14 @@ class PublicPassTests {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    @Autowired
+    private PassAccessLogRepository passAccessLogRepository;
+
     private UUID userId;
 
     @BeforeEach
     void setUp() {
+        passAccessLogRepository.deleteAll();
         emergencyPassRepository.deleteAll();
         userRepository.deleteAll();
 
@@ -127,6 +138,86 @@ class PublicPassTests {
         mockMvc.perform(get("/api/v1/public/passes/{token}", rawToken))
                 .andExpect(status().isGone())
                 .andExpect(jsonPath("$.code").value("PUBLIC_PASS_REVOKED"));
+    }
+
+    @Test
+    void successfulPublicAccessCreatesSuccessAuditLog() throws Exception {
+        String rawToken = "audit-success-token";
+        EmergencyPass saved = savePass(
+                rawToken,
+                Instant.now().plus(2, ChronoUnit.DAYS),
+                Set.of(ShareCategory.ALLERGIES)
+        );
+
+        mockMvc.perform(get("/api/v1/public/passes/{token}", rawToken))
+                .andExpect(status().isOk());
+
+        PassAccessLog log = onlyAuditLog();
+        assertEquals(AccessOutcome.SUCCESS, log.getOutcome());
+        assertEquals(saved.getId(), log.getPassId());
+        assertEquals(userId, log.getUserId());
+        assertNotNull(log.getAccessedAt());
+    }
+
+    @Test
+    void invalidPublicAccessCreatesInvalidAuditLog() throws Exception {
+        mockMvc.perform(get("/api/v1/public/passes/{token}", "invalid-audit-token"))
+                .andExpect(status().isNotFound());
+
+        PassAccessLog log = onlyAuditLog();
+        assertEquals(AccessOutcome.INVALID, log.getOutcome());
+        assertNull(log.getPassId());
+        assertNull(log.getUserId());
+        assertNotNull(log.getAccessedAt());
+    }
+
+    @Test
+    void expiredPublicAccessCreatesExpiredAuditLog() throws Exception {
+        String rawToken = "audit-expired-token";
+        EmergencyPass saved = savePass(
+                rawToken,
+                Instant.now().minus(1, ChronoUnit.HOURS),
+                Set.of(ShareCategory.ALLERGIES)
+        );
+
+        mockMvc.perform(get("/api/v1/public/passes/{token}", rawToken))
+                .andExpect(status().isGone());
+
+        PassAccessLog log = onlyAuditLog();
+        assertEquals(AccessOutcome.EXPIRED, log.getOutcome());
+        assertEquals(saved.getId(), log.getPassId());
+        assertEquals(userId, log.getUserId());
+        assertNotNull(log.getAccessedAt());
+    }
+
+    @Test
+    void revokedPublicAccessCreatesRevokedAuditLog() throws Exception {
+        String rawToken = "audit-revoked-token";
+        EmergencyPass saved = savePass(
+                rawToken,
+                Instant.now().plus(2, ChronoUnit.DAYS),
+                Set.of(ShareCategory.ALLERGIES)
+        );
+
+        jdbcTemplate.update(
+                "UPDATE emergency_pass SET status = 'REVOKED', revoked_at = CURRENT_TIMESTAMP WHERE id = ?",
+                saved.getId()
+        );
+
+        mockMvc.perform(get("/api/v1/public/passes/{token}", rawToken))
+                .andExpect(status().isGone());
+
+        PassAccessLog log = onlyAuditLog();
+        assertEquals(AccessOutcome.REVOKED, log.getOutcome());
+        assertEquals(saved.getId(), log.getPassId());
+        assertEquals(userId, log.getUserId());
+        assertNotNull(log.getAccessedAt());
+    }
+
+    private PassAccessLog onlyAuditLog() {
+        List<PassAccessLog> logs = passAccessLogRepository.findAll();
+        assertEquals(1, logs.size());
+        return logs.getFirst();
     }
 
     private EmergencyPass savePass(
