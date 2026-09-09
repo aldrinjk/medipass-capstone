@@ -4,6 +4,7 @@ import com.medipass.audit.AccessLogNotFoundException;
 import com.medipass.auth.EmailAlreadyRegisteredException;
 import com.medipass.auth.InvalidCredentialsException;
 import com.medipass.auth.InvalidRefreshTokenException;
+import com.medipass.pass.PassLifecycleException;
 import com.medipass.pass.PassNotFoundException;
 import com.medipass.pass.PassStatus;
 import com.medipass.pass.PublicPassGoneException;
@@ -129,6 +130,21 @@ public class GlobalExceptionHandler {
                 ApiError.of(
                         HttpStatus.NOT_FOUND.value(),
                         "PASS_NOT_FOUND",
+                        ex.getMessage(),
+                        request.getRequestURI()
+                )
+        );
+    }
+
+    @ExceptionHandler(PassLifecycleException.class)
+    public ResponseEntity<ApiError> handlePassLifecycle(
+            PassLifecycleException ex,
+            HttpServletRequest request
+    ) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                ApiError.of(
+                        HttpStatus.CONFLICT.value(),
+                        "PASS_LIFECYCLE_CONFLICT",
                         ex.getMessage(),
                         request.getRequestURI()
                 )
