@@ -101,6 +101,22 @@ class PublicPassTests {
     }
 
     @Test
+    void publicDemographicsDoNotExposeInternalPatientId() throws Exception {
+        String rawToken = "safe-demographics-token";
+        savePass(
+                rawToken,
+                Instant.now().plus(2, ChronoUnit.DAYS),
+                Set.of(ShareCategory.DEMOGRAPHICS)
+        );
+
+        mockMvc.perform(get("/api/v1/public/passes/{token}", rawToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.demographics.fullName").exists())
+                .andExpect(jsonPath("$.demographics.id").doesNotExist())
+                .andExpect(jsonPath("$.userId").doesNotExist());
+    }
+
+    @Test
     void invalidPublicTokenReturns404() throws Exception {
         mockMvc.perform(get("/api/v1/public/passes/{token}", "token-that-does-not-exist"))
                 .andExpect(status().isNotFound())
