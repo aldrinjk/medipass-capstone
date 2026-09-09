@@ -81,6 +81,39 @@ public class EmergencyPassService {
         return toMetadataResponse(saved);
     }
 
+    @Transactional
+    public RotatePassResponse rotatePass(UUID userId, UUID passId) {
+        EmergencyPass pass = repository.findByIdAndUserId(passId, userId)
+                .orElseThrow(PassNotFoundException::new);
+
+        Instant now = Instant.now();
+
+        if (pass.getStatus() == PassStatus.ACTIVE && !pass.getExpiresAt().isAfter(now)) {
+            pass.expire(now);
+            repository.saveAndFlush(pass);
+            throw new PassLifecycleException("Expired passes cannot be rotated.");
+        }
+
+        if (pass.getStatus() != PassStatus.ACTIVE) {
+            throw new PassLifecycleException("Only an active pass can be rotated.");
+        }
+
+        String rawToken = passTokenService.generateToken();
+        String newTokenHash = passTokenService.hashToken(rawToken);
+        pass.rotateToken(newTokenHash, now);
+
+        EmergencyPass saved = repository.saveAndFlush(pass);
+        String publicUrl = publicResponderWebBaseUrl + "/passes/" + rawToken;
+
+        return new RotatePassResponse(
+                saved.getId(),
+                saved.getStatus(),
+                saved.getExpiresAt(),
+                publicUrl,
+                saved.getCategories()
+        );
+    }
+
     private PassMetadataResponse toMetadataResponse(EmergencyPass pass) {
         return new PassMetadataResponse(
                 pass.getId(),
