@@ -91,6 +91,14 @@ public class EmergencyPass {
         }
     }
 
+    public void rotateToken(String newTokenHash, Instant now) {
+        if (status != PassStatus.ACTIVE) {
+            throw new PassLifecycleException("Only an active pass can be rotated.");
+        }
+        tokenHash = newTokenHash;
+        updatedAt = now;
+    }
+
     public UUID getId() {
         return id;
     }
