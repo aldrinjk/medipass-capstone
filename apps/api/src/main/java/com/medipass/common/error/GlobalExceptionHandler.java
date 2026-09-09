@@ -1,5 +1,6 @@
 package com.medipass.common.error;
 
+import com.medipass.audit.AccessLogNotFoundException;
 import com.medipass.auth.EmailAlreadyRegisteredException;
 import com.medipass.auth.InvalidCredentialsException;
 import com.medipass.auth.InvalidRefreshTokenException;
@@ -128,6 +129,21 @@ public class GlobalExceptionHandler {
                 ApiError.of(
                         HttpStatus.NOT_FOUND.value(),
                         "PASS_NOT_FOUND",
+                        ex.getMessage(),
+                        request.getRequestURI()
+                )
+        );
+    }
+
+    @ExceptionHandler(AccessLogNotFoundException.class)
+    public ResponseEntity<ApiError> handleAccessLogNotFound(
+            AccessLogNotFoundException ex,
+            HttpServletRequest request
+    ) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                ApiError.of(
+                        HttpStatus.NOT_FOUND.value(),
+                        "ACCESS_LOG_NOT_FOUND",
                         ex.getMessage(),
                         request.getRequestURI()
                 )
