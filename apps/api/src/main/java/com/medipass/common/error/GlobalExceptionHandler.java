@@ -2,6 +2,7 @@ package com.medipass.common.error;
 
 import com.medipass.auth.EmailAlreadyRegisteredException;
 import com.medipass.auth.InvalidCredentialsException;
+import com.medipass.auth.InvalidRefreshTokenException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import java.util.LinkedHashMap;
@@ -77,6 +78,21 @@ public class GlobalExceptionHandler {
                 ApiError.of(
                         HttpStatus.UNAUTHORIZED.value(),
                         "INVALID_CREDENTIALS",
+                        ex.getMessage(),
+                        request.getRequestURI()
+                )
+        );
+    }
+
+    @ExceptionHandler(InvalidRefreshTokenException.class)
+    public ResponseEntity<ApiError> handleInvalidRefreshToken(
+            InvalidRefreshTokenException ex,
+            HttpServletRequest request
+    ) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
+                ApiError.of(
+                        HttpStatus.UNAUTHORIZED.value(),
+                        "INVALID_REFRESH_TOKEN",
                         ex.getMessage(),
                         request.getRequestURI()
                 )
