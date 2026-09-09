@@ -4,6 +4,8 @@ import com.medipass.patient.dto.AllergyDto;
 import com.medipass.patient.dto.AllergyRequest;
 import com.medipass.patient.dto.ConditionDto;
 import com.medipass.patient.dto.ConditionRequest;
+import com.medipass.patient.dto.EmergencyContactDto;
+import com.medipass.patient.dto.EmergencyContactRequest;
 import com.medipass.patient.dto.MedicationDto;
 import com.medipass.patient.dto.MedicationRequest;
 import com.medipass.patient.dto.PatientProfileDto;
@@ -30,4 +32,7 @@ public interface ClinicalService {
     ConditionDto createCondition(UUID userId, ConditionRequest request);
     ConditionDto updateCondition(UUID userId, UUID conditionId, ConditionRequest request);
     void deleteCondition(UUID userId, UUID conditionId);
+
+    EmergencyContactDto getEmergencyContact(UUID userId);
+    EmergencyContactDto updateEmergencyContact(UUID userId, EmergencyContactRequest request);
 }
