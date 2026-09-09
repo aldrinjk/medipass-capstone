@@ -1,5 +1,6 @@
 package com.medipass.auth;
 
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
@@ -10,6 +11,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
+import java.util.UUID;
 
 @Service
 public class JwtService {
@@ -37,6 +39,15 @@ public class JwtService {
                 .expiration(Date.from(expiresAt))
                 .signWith(key)
                 .compact();
+    }
+
+    public UUID extractUserId(String token) {
+        Claims claims = Jwts.parser()
+                .verifyWith(key)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
+        return UUID.fromString(claims.getSubject());
     }
 
     public long getAccessTokenLifetimeSeconds() {
