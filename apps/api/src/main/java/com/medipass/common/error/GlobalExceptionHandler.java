@@ -4,6 +4,9 @@ import com.medipass.auth.EmailAlreadyRegisteredException;
 import com.medipass.auth.InvalidCredentialsException;
 import com.medipass.auth.InvalidRefreshTokenException;
 import com.medipass.pass.PassNotFoundException;
+import com.medipass.pass.PassStatus;
+import com.medipass.pass.PublicPassGoneException;
+import com.medipass.pass.PublicPassNotFoundException;
 import com.medipass.patient.ClinicalResourceNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
@@ -125,6 +128,40 @@ public class GlobalExceptionHandler {
                 ApiError.of(
                         HttpStatus.NOT_FOUND.value(),
                         "PASS_NOT_FOUND",
+                        ex.getMessage(),
+                        request.getRequestURI()
+                )
+        );
+    }
+
+    @ExceptionHandler(PublicPassNotFoundException.class)
+    public ResponseEntity<ApiError> handlePublicPassNotFound(
+            PublicPassNotFoundException ex,
+            HttpServletRequest request
+    ) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                ApiError.of(
+                        HttpStatus.NOT_FOUND.value(),
+                        "PUBLIC_PASS_NOT_FOUND",
+                        ex.getMessage(),
+                        request.getRequestURI()
+                )
+        );
+    }
+
+    @ExceptionHandler(PublicPassGoneException.class)
+    public ResponseEntity<ApiError> handlePublicPassGone(
+            PublicPassGoneException ex,
+            HttpServletRequest request
+    ) {
+        String code = ex.getPassStatus() == PassStatus.REVOKED
+                ? "PUBLIC_PASS_REVOKED"
+                : "PUBLIC_PASS_EXPIRED";
+
+        return ResponseEntity.status(HttpStatus.GONE).body(
+                ApiError.of(
+                        HttpStatus.GONE.value(),
+                        code,
                         ex.getMessage(),
                         request.getRequestURI()
                 )

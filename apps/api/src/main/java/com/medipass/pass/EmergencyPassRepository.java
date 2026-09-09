@@ -9,4 +9,5 @@ import java.util.UUID;
 public interface EmergencyPassRepository extends JpaRepository<EmergencyPass, UUID> {
     List<EmergencyPass> findAllByUserIdOrderByCreatedAtDesc(UUID userId);
     Optional<EmergencyPass> findByIdAndUserId(UUID id, UUID userId);
+    Optional<EmergencyPass> findByTokenHash(String tokenHash);
 }
