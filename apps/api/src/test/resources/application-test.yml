@@ -14,3 +14,7 @@ spring:
 medipass:
   cors:
     allowed-origins: http://localhost:5173
+  jwt:
+    secret: test-only-medipass-jwt-secret-at-least-32-bytes-long
+    access-minutes: 15
+    refresh-days: 7
