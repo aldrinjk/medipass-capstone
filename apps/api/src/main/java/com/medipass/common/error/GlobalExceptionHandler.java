@@ -3,6 +3,7 @@ package com.medipass.common.error;
 import com.medipass.auth.EmailAlreadyRegisteredException;
 import com.medipass.auth.InvalidCredentialsException;
 import com.medipass.auth.InvalidRefreshTokenException;
+import com.medipass.patient.ClinicalResourceNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import java.util.LinkedHashMap;
@@ -93,6 +94,21 @@ public class GlobalExceptionHandler {
                 ApiError.of(
                         HttpStatus.UNAUTHORIZED.value(),
                         "INVALID_REFRESH_TOKEN",
+                        ex.getMessage(),
+                        request.getRequestURI()
+                )
+        );
+    }
+
+    @ExceptionHandler(ClinicalResourceNotFoundException.class)
+    public ResponseEntity<ApiError> handleClinicalResourceNotFound(
+            ClinicalResourceNotFoundException ex,
+            HttpServletRequest request
+    ) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                ApiError.of(
+                        HttpStatus.NOT_FOUND.value(),
+                        "CLINICAL_RESOURCE_NOT_FOUND",
                         ex.getMessage(),
                         request.getRequestURI()
                 )
