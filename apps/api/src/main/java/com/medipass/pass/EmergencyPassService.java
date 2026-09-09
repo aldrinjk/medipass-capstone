@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -44,6 +45,32 @@ public class EmergencyPassService {
                 saved.getExpiresAt(),
                 publicUrl,
                 saved.getCategories()
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public List<PassMetadataResponse> listPasses(UUID userId) {
+        return repository.findAllByUserIdOrderByCreatedAtDesc(userId)
+                .stream()
+                .map(this::toMetadataResponse)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public PassMetadataResponse getPass(UUID userId, UUID passId) {
+        EmergencyPass pass = repository.findByIdAndUserId(passId, userId)
+                .orElseThrow(PassNotFoundException::new);
+        return toMetadataResponse(pass);
+    }
+
+    private PassMetadataResponse toMetadataResponse(EmergencyPass pass) {
+        return new PassMetadataResponse(
+                pass.getId(),
+                pass.getStatus(),
+                pass.getExpiresAt(),
+                pass.getCategories(),
+                pass.getCreatedAt(),
+                pass.getRevokedAt()
         );
     }
 
