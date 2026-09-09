@@ -1,6 +1,7 @@
 package com.medipass.common.error;
 
 import com.medipass.auth.EmailAlreadyRegisteredException;
+import com.medipass.auth.InvalidCredentialsException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import java.util.LinkedHashMap;
@@ -61,6 +62,21 @@ public class GlobalExceptionHandler {
                 ApiError.of(
                         HttpStatus.CONFLICT.value(),
                         "EMAIL_ALREADY_REGISTERED",
+                        ex.getMessage(),
+                        request.getRequestURI()
+                )
+        );
+    }
+
+    @ExceptionHandler(InvalidCredentialsException.class)
+    public ResponseEntity<ApiError> handleInvalidCredentials(
+            InvalidCredentialsException ex,
+            HttpServletRequest request
+    ) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
+                ApiError.of(
+                        HttpStatus.UNAUTHORIZED.value(),
+                        "INVALID_CREDENTIALS",
                         ex.getMessage(),
                         request.getRequestURI()
                 )
