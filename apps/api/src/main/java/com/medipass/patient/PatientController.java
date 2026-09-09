@@ -2,6 +2,8 @@ package com.medipass.patient;
 
 import com.medipass.patient.dto.AllergyDto;
 import com.medipass.patient.dto.AllergyRequest;
+import com.medipass.patient.dto.ConditionDto;
+import com.medipass.patient.dto.ConditionRequest;
 import com.medipass.patient.dto.MedicationDto;
 import com.medipass.patient.dto.MedicationRequest;
 import com.medipass.patient.dto.PatientProfileDto;
@@ -69,10 +71,7 @@ public class PatientController {
     }
 
     @DeleteMapping("/allergies/{id}")
-    public ResponseEntity<Void> deleteAllergy(
-            Authentication authentication,
-            @PathVariable UUID id
-    ) {
+    public ResponseEntity<Void> deleteAllergy(Authentication authentication, @PathVariable UUID id) {
         clinicalService.deleteAllergy(userId(authentication), id);
         return ResponseEntity.noContent().build();
     }
@@ -101,11 +100,37 @@ public class PatientController {
     }
 
     @DeleteMapping("/medications/{id}")
-    public ResponseEntity<Void> deleteMedication(
-            Authentication authentication,
-            @PathVariable UUID id
-    ) {
+    public ResponseEntity<Void> deleteMedication(Authentication authentication, @PathVariable UUID id) {
         clinicalService.deleteMedication(userId(authentication), id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/conditions")
+    public ResponseEntity<List<ConditionDto>> getConditions(Authentication authentication) {
+        return ResponseEntity.ok(clinicalService.getConditions(userId(authentication)));
+    }
+
+    @PostMapping("/conditions")
+    public ResponseEntity<ConditionDto> createCondition(
+            Authentication authentication,
+            @Valid @RequestBody ConditionRequest request
+    ) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(clinicalService.createCondition(userId(authentication), request));
+    }
+
+    @PutMapping("/conditions/{id}")
+    public ResponseEntity<ConditionDto> updateCondition(
+            Authentication authentication,
+            @PathVariable UUID id,
+            @Valid @RequestBody ConditionRequest request
+    ) {
+        return ResponseEntity.ok(clinicalService.updateCondition(userId(authentication), id, request));
+    }
+
+    @DeleteMapping("/conditions/{id}")
+    public ResponseEntity<Void> deleteCondition(Authentication authentication, @PathVariable UUID id) {
+        clinicalService.deleteCondition(userId(authentication), id);
         return ResponseEntity.noContent().build();
     }
 
