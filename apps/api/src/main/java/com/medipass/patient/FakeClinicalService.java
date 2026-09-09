@@ -4,6 +4,8 @@ import com.medipass.patient.dto.AllergyDto;
 import com.medipass.patient.dto.AllergyRequest;
 import com.medipass.patient.dto.ConditionDto;
 import com.medipass.patient.dto.ConditionRequest;
+import com.medipass.patient.dto.EmergencyContactDto;
+import com.medipass.patient.dto.EmergencyContactRequest;
 import com.medipass.patient.dto.MedicationDto;
 import com.medipass.patient.dto.MedicationRequest;
 import com.medipass.patient.dto.PatientProfileDto;
@@ -23,6 +25,7 @@ public class FakeClinicalService implements ClinicalService {
     private final Map<UUID, Map<UUID, AllergyDto>> allergiesByUser = new ConcurrentHashMap<>();
     private final Map<UUID, Map<UUID, MedicationDto>> medicationsByUser = new ConcurrentHashMap<>();
     private final Map<UUID, Map<UUID, ConditionDto>> conditionsByUser = new ConcurrentHashMap<>();
+    private final Map<UUID, EmergencyContactDto> emergencyContactsByUser = new ConcurrentHashMap<>();
 
     @Override
     public PatientProfileDto getPatientProfile(UUID userId) {
@@ -127,6 +130,25 @@ public class FakeClinicalService implements ClinicalService {
     public void deleteCondition(UUID userId, UUID conditionId) {
         ConditionDto removed = conditionsFor(userId).remove(conditionId);
         if (removed == null) throw new ClinicalResourceNotFoundException("Condition not found.");
+    }
+
+    @Override
+    public EmergencyContactDto getEmergencyContact(UUID userId) {
+        return emergencyContactsByUser.getOrDefault(
+                userId,
+                new EmergencyContactDto("Demo Contact", "Family", "0000000000")
+        );
+    }
+
+    @Override
+    public EmergencyContactDto updateEmergencyContact(UUID userId, EmergencyContactRequest request) {
+        EmergencyContactDto updated = new EmergencyContactDto(
+                request.name().trim(),
+                request.relationship().trim(),
+                request.phone().trim()
+        );
+        emergencyContactsByUser.put(userId, updated);
+        return updated;
     }
 
     private Map<UUID, AllergyDto> allergiesFor(UUID userId) {
