@@ -4,6 +4,8 @@ import com.medipass.patient.dto.AllergyDto;
 import com.medipass.patient.dto.AllergyRequest;
 import com.medipass.patient.dto.ConditionDto;
 import com.medipass.patient.dto.ConditionRequest;
+import com.medipass.patient.dto.EmergencyContactDto;
+import com.medipass.patient.dto.EmergencyContactRequest;
 import com.medipass.patient.dto.MedicationDto;
 import com.medipass.patient.dto.MedicationRequest;
 import com.medipass.patient.dto.PatientProfileDto;
@@ -132,6 +134,19 @@ public class PatientController {
     public ResponseEntity<Void> deleteCondition(Authentication authentication, @PathVariable UUID id) {
         clinicalService.deleteCondition(userId(authentication), id);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/emergency-contact")
+    public ResponseEntity<EmergencyContactDto> getEmergencyContact(Authentication authentication) {
+        return ResponseEntity.ok(clinicalService.getEmergencyContact(userId(authentication)));
+    }
+
+    @PutMapping("/emergency-contact")
+    public ResponseEntity<EmergencyContactDto> updateEmergencyContact(
+            Authentication authentication,
+            @Valid @RequestBody EmergencyContactRequest request
+    ) {
+        return ResponseEntity.ok(clinicalService.updateEmergencyContact(userId(authentication), request));
     }
 
     private UUID userId(Authentication authentication) {
