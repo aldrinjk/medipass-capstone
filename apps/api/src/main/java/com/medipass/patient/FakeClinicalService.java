@@ -2,6 +2,8 @@ package com.medipass.patient;
 
 import com.medipass.patient.dto.AllergyDto;
 import com.medipass.patient.dto.AllergyRequest;
+import com.medipass.patient.dto.MedicationDto;
+import com.medipass.patient.dto.MedicationRequest;
 import com.medipass.patient.dto.PatientProfileDto;
 import com.medipass.patient.dto.UpdatePatientProfileRequest;
 import org.springframework.stereotype.Service;
@@ -17,6 +19,7 @@ public class FakeClinicalService implements ClinicalService {
 
     private final Map<UUID, PatientProfileDto> profiles = new ConcurrentHashMap<>();
     private final Map<UUID, Map<UUID, AllergyDto>> allergiesByUser = new ConcurrentHashMap<>();
+    private final Map<UUID, Map<UUID, MedicationDto>> medicationsByUser = new ConcurrentHashMap<>();
 
     @Override
     public PatientProfileDto getPatientProfile(UUID userId) {
@@ -71,8 +74,44 @@ public class FakeClinicalService implements ClinicalService {
         }
     }
 
+    @Override
+    public List<MedicationDto> getMedications(UUID userId) {
+        return new ArrayList<>(medicationsFor(userId).values());
+    }
+
+    @Override
+    public MedicationDto createMedication(UUID userId, MedicationRequest request) {
+        UUID id = UUID.randomUUID();
+        MedicationDto medication = toMedication(id, request);
+        medicationsFor(userId).put(id, medication);
+        return medication;
+    }
+
+    @Override
+    public MedicationDto updateMedication(UUID userId, UUID medicationId, MedicationRequest request) {
+        Map<UUID, MedicationDto> medications = medicationsFor(userId);
+        if (!medications.containsKey(medicationId)) {
+            throw new ClinicalResourceNotFoundException("Medication not found.");
+        }
+        MedicationDto updated = toMedication(medicationId, request);
+        medications.put(medicationId, updated);
+        return updated;
+    }
+
+    @Override
+    public void deleteMedication(UUID userId, UUID medicationId) {
+        MedicationDto removed = medicationsFor(userId).remove(medicationId);
+        if (removed == null) {
+            throw new ClinicalResourceNotFoundException("Medication not found.");
+        }
+    }
+
     private Map<UUID, AllergyDto> allergiesFor(UUID userId) {
         return allergiesByUser.computeIfAbsent(userId, id -> new ConcurrentHashMap<>());
+    }
+
+    private Map<UUID, MedicationDto> medicationsFor(UUID userId) {
+        return medicationsByUser.computeIfAbsent(userId, id -> new ConcurrentHashMap<>());
     }
 
     private AllergyDto toAllergy(UUID id, AllergyRequest request) {
@@ -81,6 +120,15 @@ public class FakeClinicalService implements ClinicalService {
                 request.substance().trim(),
                 normalize(request.reaction()),
                 normalize(request.severity())
+        );
+    }
+
+    private MedicationDto toMedication(UUID id, MedicationRequest request) {
+        return new MedicationDto(
+                id,
+                request.name().trim(),
+                normalize(request.dosage()),
+                normalize(request.frequency())
         );
     }
 
