@@ -2,6 +2,8 @@ package com.medipass.patient;
 
 import com.medipass.patient.dto.AllergyDto;
 import com.medipass.patient.dto.AllergyRequest;
+import com.medipass.patient.dto.MedicationDto;
+import com.medipass.patient.dto.MedicationRequest;
 import com.medipass.patient.dto.PatientProfileDto;
 import com.medipass.patient.dto.UpdatePatientProfileRequest;
 import jakarta.validation.Valid;
@@ -72,6 +74,38 @@ public class PatientController {
             @PathVariable UUID id
     ) {
         clinicalService.deleteAllergy(userId(authentication), id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/medications")
+    public ResponseEntity<List<MedicationDto>> getMedications(Authentication authentication) {
+        return ResponseEntity.ok(clinicalService.getMedications(userId(authentication)));
+    }
+
+    @PostMapping("/medications")
+    public ResponseEntity<MedicationDto> createMedication(
+            Authentication authentication,
+            @Valid @RequestBody MedicationRequest request
+    ) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(clinicalService.createMedication(userId(authentication), request));
+    }
+
+    @PutMapping("/medications/{id}")
+    public ResponseEntity<MedicationDto> updateMedication(
+            Authentication authentication,
+            @PathVariable UUID id,
+            @Valid @RequestBody MedicationRequest request
+    ) {
+        return ResponseEntity.ok(clinicalService.updateMedication(userId(authentication), id, request));
+    }
+
+    @DeleteMapping("/medications/{id}")
+    public ResponseEntity<Void> deleteMedication(
+            Authentication authentication,
+            @PathVariable UUID id
+    ) {
+        clinicalService.deleteMedication(userId(authentication), id);
         return ResponseEntity.noContent().build();
     }
 
