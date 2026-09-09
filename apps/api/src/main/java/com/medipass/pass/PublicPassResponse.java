@@ -5,7 +5,6 @@ import com.medipass.patient.dto.AllergyDto;
 import com.medipass.patient.dto.ConditionDto;
 import com.medipass.patient.dto.EmergencyContactDto;
 import com.medipass.patient.dto.MedicationDto;
-import com.medipass.patient.dto.PatientProfileDto;
 import com.medipass.sharing.ShareCategory;
 
 import java.time.Instant;
@@ -18,7 +17,7 @@ public record PublicPassResponse(
         UUID passId,
         Instant expiresAt,
         Set<ShareCategory> categories,
-        PatientProfileDto demographics,
+        PublicDemographicsResponse demographics,
         List<AllergyDto> allergies,
         List<MedicationDto> medications,
         List<ConditionDto> conditions,

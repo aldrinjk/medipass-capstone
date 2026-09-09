@@ -41,9 +41,11 @@ public class PublicPassService {
         EmergencyPass emergencyPass = resolveActivePass(rawToken);
         Set<ShareCategory> categories = emergencyPass.getCategories();
 
-        PatientProfileDto demographics = categories.contains(ShareCategory.DEMOGRAPHICS)
-                ? clinicalService.getPatientProfile(emergencyPass.getUserId())
-                : null;
+        PublicDemographicsResponse demographics = null;
+        if (categories.contains(ShareCategory.DEMOGRAPHICS)) {
+            PatientProfileDto profile = clinicalService.getPatientProfile(emergencyPass.getUserId());
+            demographics = PublicDemographicsResponse.from(profile);
+        }
 
         List<AllergyDto> allergies = categories.contains(ShareCategory.ALLERGIES)
                 ? clinicalService.getAllergies(emergencyPass.getUserId())

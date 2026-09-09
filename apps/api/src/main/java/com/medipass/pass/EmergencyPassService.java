@@ -11,6 +11,8 @@ import java.util.UUID;
 @Service
 public class EmergencyPassService {
 
+    private static final int MAX_TOKEN_GENERATION_ATTEMPTS = 5;
+
     private final EmergencyPassRepository repository;
     private final PassTokenService passTokenService;
     private final String publicResponderWebBaseUrl;
@@ -27,18 +29,17 @@ public class EmergencyPassService {
 
     @Transactional
     public CreatePassResponse createPass(UUID userId, CreatePassRequest request) {
-        String rawToken = passTokenService.generateToken();
-        String tokenHash = passTokenService.hashToken(rawToken);
+        GeneratedToken generatedToken = generateUniqueToken();
 
         EmergencyPass emergencyPass = new EmergencyPass(
                 userId,
-                tokenHash,
+                generatedToken.tokenHash(),
                 request.expiresAt(),
                 request.categories()
         );
 
         EmergencyPass saved = repository.saveAndFlush(emergencyPass);
-        String publicUrl = publicResponderWebBaseUrl + "/passes/" + rawToken;
+        String publicUrl = publicResponderWebBaseUrl + "/passes/" + generatedToken.rawToken();
 
         return new CreatePassResponse(
                 saved.getId(),
@@ -101,12 +102,11 @@ public class EmergencyPassService {
             throw new PassLifecycleException("Only an active pass can be rotated.");
         }
 
-        String rawToken = passTokenService.generateToken();
-        String newTokenHash = passTokenService.hashToken(rawToken);
-        pass.rotateToken(newTokenHash, now);
+        GeneratedToken generatedToken = generateUniqueToken();
+        pass.rotateToken(generatedToken.tokenHash(), now);
 
         EmergencyPass saved = repository.saveAndFlush(pass);
-        String publicUrl = publicResponderWebBaseUrl + "/passes/" + rawToken;
+        String publicUrl = publicResponderWebBaseUrl + "/passes/" + generatedToken.rawToken();
 
         return new RotatePassResponse(
                 saved.getId(),
@@ -115,6 +115,17 @@ public class EmergencyPassService {
                 publicUrl,
                 saved.getCategories()
         );
+    }
+
+    private GeneratedToken generateUniqueToken() {
+        for (int attempt = 0; attempt < MAX_TOKEN_GENERATION_ATTEMPTS; attempt++) {
+            String rawToken = passTokenService.generateToken();
+            String tokenHash = passTokenService.hashToken(rawToken);
+            if (!repository.existsByTokenHash(tokenHash)) {
+                return new GeneratedToken(rawToken, tokenHash);
+            }
+        }
+        throw new IllegalStateException("Unable to generate a unique emergency pass token.");
     }
 
     private boolean expireIfNeeded(EmergencyPass pass, Instant now) {
@@ -141,5 +152,8 @@ public class EmergencyPassService {
             return "http://localhost:5173";
         }
         return value.endsWith("/") ? value.substring(0, value.length() - 1) : value;
+    }
+
+    private record GeneratedToken(String rawToken, String tokenHash) {
     }
 }
