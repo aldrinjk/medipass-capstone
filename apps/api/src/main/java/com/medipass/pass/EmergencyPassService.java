@@ -49,18 +49,23 @@ public class EmergencyPassService {
         );
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public List<PassMetadataResponse> listPasses(UUID userId) {
+        Instant now = Instant.now();
         return repository.findAllByUserIdOrderByCreatedAtDesc(userId)
                 .stream()
-                .map(this::toMetadataResponse)
+                .map(pass -> {
+                    expireIfNeeded(pass, now);
+                    return toMetadataResponse(pass);
+                })
                 .toList();
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public PassMetadataResponse getPass(UUID userId, UUID passId) {
         EmergencyPass pass = repository.findByIdAndUserId(passId, userId)
                 .orElseThrow(PassNotFoundException::new);
+        expireIfNeeded(pass, Instant.now());
         return toMetadataResponse(pass);
     }
 
@@ -71,25 +76,23 @@ public class EmergencyPassService {
 
         Instant now = Instant.now();
 
-        if (pass.getStatus() == PassStatus.ACTIVE && !pass.getExpiresAt().isAfter(now)) {
-            pass.expire(now);
-        } else {
-            pass.revoke(now);
+        if (expireIfNeeded(pass, now)) {
+            return toMetadataResponse(repository.saveAndFlush(pass));
         }
 
+        pass.revoke(now);
         EmergencyPass saved = repository.saveAndFlush(pass);
         return toMetadataResponse(saved);
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = PassLifecycleException.class)
     public RotatePassResponse rotatePass(UUID userId, UUID passId) {
         EmergencyPass pass = repository.findByIdAndUserId(passId, userId)
                 .orElseThrow(PassNotFoundException::new);
 
         Instant now = Instant.now();
 
-        if (pass.getStatus() == PassStatus.ACTIVE && !pass.getExpiresAt().isAfter(now)) {
-            pass.expire(now);
+        if (expireIfNeeded(pass, now)) {
             repository.saveAndFlush(pass);
             throw new PassLifecycleException("Expired passes cannot be rotated.");
         }
@@ -112,6 +115,14 @@ public class EmergencyPassService {
                 publicUrl,
                 saved.getCategories()
         );
+    }
+
+    private boolean expireIfNeeded(EmergencyPass pass, Instant now) {
+        if (pass.getStatus() == PassStatus.ACTIVE && !pass.getExpiresAt().isAfter(now)) {
+            pass.expire(now);
+            return true;
+        }
+        return false;
     }
 
     private PassMetadataResponse toMetadataResponse(EmergencyPass pass) {
