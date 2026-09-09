@@ -49,6 +49,21 @@ class PatientSecurityValidationTests {
     }
 
     @Test
+    void malformedJsonReturnsBadRequestInsteadOfServerError() throws Exception {
+        mockMvc.perform(post("/api/v1/patients/me/allergies")
+                        .with(user(USER_A).roles("PATIENT"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "substance": "Penicillin",
+                                  "reaction": "Rash",
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_REQUEST_BODY"));
+    }
+
+    @Test
     void clinicalDataIsScopedToAuthenticatedPatient() throws Exception {
         mockMvc.perform(post("/api/v1/patients/me/allergies")
                         .with(user(USER_A).roles("PATIENT"))
