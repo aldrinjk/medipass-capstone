@@ -10,4 +10,5 @@ public interface EmergencyPassRepository extends JpaRepository<EmergencyPass, UU
     List<EmergencyPass> findAllByUserIdOrderByCreatedAtDesc(UUID userId);
     Optional<EmergencyPass> findByIdAndUserId(UUID id, UUID userId);
     Optional<EmergencyPass> findByTokenHash(String tokenHash);
+    boolean existsByTokenHash(String tokenHash);
 }
