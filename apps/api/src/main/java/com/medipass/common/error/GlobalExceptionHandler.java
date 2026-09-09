@@ -17,6 +17,7 @@ import java.util.Map;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -56,6 +57,21 @@ public class GlobalExceptionHandler {
                         HttpStatus.BAD_REQUEST.value(),
                         "VALIDATION_ERROR",
                         "Request validation failed.",
+                        request.getRequestURI()
+                )
+        );
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiError> handleUnreadableRequestBody(
+            HttpMessageNotReadableException ex,
+            HttpServletRequest request
+    ) {
+        return ResponseEntity.badRequest().body(
+                ApiError.of(
+                        HttpStatus.BAD_REQUEST.value(),
+                        "INVALID_REQUEST_BODY",
+                        "Request body is malformed or unreadable.",
                         request.getRequestURI()
                 )
         );
