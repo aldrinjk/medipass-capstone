@@ -1,4 +1,4 @@
-import * as SecureStore from 'expo-secure-store';
+import * as platformStore from '../../../services/platformStore';
 
 /**
  * The backend only ever returns a pass's `publicUrl` at creation and
@@ -19,7 +19,7 @@ const MAX_ENTRIES = 25;
 type UrlCache = Record<string, string>;
 
 async function readCache(): Promise<UrlCache> {
-  const raw = await SecureStore.getItemAsync(CACHE_KEY);
+  const raw = await platformStore.getItemAsync(CACHE_KEY);
   if (!raw) return {};
   try {
     return JSON.parse(raw) as UrlCache;
@@ -41,11 +41,11 @@ export async function setCachedPublicUrl(passId: string, publicUrl: string): Pro
   const trimmed =
     entries.length > MAX_ENTRIES ? entries.slice(entries.length - MAX_ENTRIES) : entries;
 
-  await SecureStore.setItemAsync(CACHE_KEY, JSON.stringify(Object.fromEntries(trimmed)));
+  await platformStore.setItemAsync(CACHE_KEY, JSON.stringify(Object.fromEntries(trimmed)));
 }
 
 export async function clearCachedPublicUrl(passId: string): Promise<void> {
   const cache = await readCache();
   delete cache[passId];
-  await SecureStore.setItemAsync(CACHE_KEY, JSON.stringify(cache));
+  await platformStore.setItemAsync(CACHE_KEY, JSON.stringify(cache));
 }
