@@ -53,8 +53,8 @@ class PassAccessLogEndpointTests {
 
     @Test
     void patientOnlySeesOwnAccessLogs() throws Exception {
-        passAccessLogRepository.saveAndFlush(new PassAccessLog(null, userAId, AccessOutcome.SUCCESS));
-        passAccessLogRepository.saveAndFlush(new PassAccessLog(null, userBId, AccessOutcome.EXPIRED));
+        passAccessLogRepository.saveAndFlush(new PassAccessLog(null, userAId, AccessOutcome.SUCCESS, "test-correlation-a1"));
+        passAccessLogRepository.saveAndFlush(new PassAccessLog(null, userBId, AccessOutcome.EXPIRED, "test-correlation-b1"));
 
         mockMvc.perform(get("/api/v1/patients/me/access-logs")
                         .with(user(userAId.toString()).roles("PATIENT")))
@@ -68,7 +68,7 @@ class PassAccessLogEndpointTests {
     @Test
     void patientCanReadOwnAccessLogById() throws Exception {
         PassAccessLog ownLog = passAccessLogRepository.saveAndFlush(
-                new PassAccessLog(null, userAId, AccessOutcome.REVOKED)
+                new PassAccessLog(null, userAId, AccessOutcome.REVOKED, "test-correlation-a2")
         );
 
         mockMvc.perform(get("/api/v1/patients/me/access-logs/{id}", ownLog.getId())
@@ -82,7 +82,7 @@ class PassAccessLogEndpointTests {
     @Test
     void patientCannotReadAnotherPatientsAccessLog() throws Exception {
         PassAccessLog otherUsersLog = passAccessLogRepository.saveAndFlush(
-                new PassAccessLog(null, userBId, AccessOutcome.SUCCESS)
+                new PassAccessLog(null, userBId, AccessOutcome.SUCCESS, "test-correlation-b2")
         );
 
         mockMvc.perform(get("/api/v1/patients/me/access-logs/{id}", otherUsersLog.getId())

@@ -58,6 +58,16 @@ public class User {
         return role;
     }
 
+    /**
+     * Promotes this account to the ADMIN role. There is no self-service API
+     * for this in the current milestone (see docs/testing/README.md for the
+     * documented local/demo bootstrap procedure) - only trusted operators
+     * with direct data access should call this.
+     */
+    public void promoteToAdmin() {
+        this.role = "ADMIN";
+    }
+
     public Instant getCreatedAt() {
         return createdAt;
     }
