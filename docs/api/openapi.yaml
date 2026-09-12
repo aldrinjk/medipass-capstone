@@ -103,13 +103,41 @@ paths:
   /api/v1/patients/me/fhir-bundle:
     get: {tags: [FHIR], security: [{bearerAuth: []}], responses: {"200": {description: FHIR R4 emergency Bundle}}}
   /api/v1/admin/metrics:
-    get: {tags: [Admin], security: [{bearerAuth: []}], responses: {"200": {description: Metrics}}}
+    get:
+      tags: [Admin]
+      security: [{bearerAuth: []}]
+      responses:
+        "200": {description: Metrics, content: {application/json: {schema: {$ref: '#/components/schemas/AdminMetricsResponse'}}}}
+        "403": {description: Caller is authenticated but not an admin}
   /api/v1/admin/passes:
-    get: {tags: [Admin], security: [{bearerAuth: []}], responses: {"200": {description: Search passes}}}
+    get:
+      tags: [Admin]
+      security: [{bearerAuth: []}]
+      parameters:
+        - {name: status, in: query, required: false, schema: {$ref: '#/components/schemas/PassStatus'}}
+      responses:
+        "200": {description: Search passes, content: {application/json: {schema: {type: array, items: {$ref: '#/components/schemas/AdminPassSummaryResponse'}}}}}
+        "403": {description: Caller is authenticated but not an admin}
   /api/v1/admin/access-logs:
-    get: {tags: [Admin], security: [{bearerAuth: []}], responses: {"200": {description: Search access logs}}}
+    get:
+      tags: [Admin]
+      security: [{bearerAuth: []}]
+      parameters:
+        - {name: outcome, in: query, required: false, schema: {$ref: '#/components/schemas/AccessOutcome'}}
+      responses:
+        "200": {description: Search access logs, content: {application/json: {schema: {type: array, items: {$ref: '#/components/schemas/AdminAccessLogResponse'}}}}}
+        "403": {description: Caller is authenticated but not an admin}
   /api/v1/admin/synthea/import:
-    post: {tags: [FHIR, Admin], security: [{bearerAuth: []}], responses: {"201": {description: Synthetic data imported}}}
+    post:
+      tags: [FHIR, Admin]
+      security: [{bearerAuth: []}]
+      description: >
+        Accepts a FHIR Bundle (or a bare array/single resource). Currently backed by a
+        fake adapter that reports resource counts without persisting anything, pending
+        the FHIR module (see docs/testing/README.md).
+      responses:
+        "201": {description: Synthetic data imported, content: {application/json: {schema: {$ref: '#/components/schemas/SyntheaImportResponse'}}}}
+        "403": {description: Caller is authenticated but not an admin}
 components:
   securitySchemes:
     bearerAuth:
@@ -144,3 +172,46 @@ components:
     AccessOutcome:
       type: string
       enum: [SUCCESS, EXPIRED, REVOKED, INVALID]
+    AdminMetricsResponse:
+      type: object
+      required: [totalUsers, totalPasses, activePasses, revokedPasses, expiredPasses, totalAccessLogs, successfulAccesses, expiredAccessAttempts, revokedAccessAttempts, invalidAccessAttempts, generatedAt]
+      properties:
+        totalUsers: {type: integer, format: int64}
+        totalPasses: {type: integer, format: int64}
+        activePasses: {type: integer, format: int64}
+        revokedPasses: {type: integer, format: int64}
+        expiredPasses: {type: integer, format: int64}
+        totalAccessLogs: {type: integer, format: int64}
+        successfulAccesses: {type: integer, format: int64}
+        expiredAccessAttempts: {type: integer, format: int64}
+        revokedAccessAttempts: {type: integer, format: int64}
+        invalidAccessAttempts: {type: integer, format: int64}
+        generatedAt: {type: string, format: date-time}
+    AdminPassSummaryResponse:
+      type: object
+      required: [passId, userId, status, expiresAt, categories, createdAt]
+      properties:
+        passId: {type: string, format: uuid}
+        userId: {type: string, format: uuid}
+        status: {$ref: '#/components/schemas/PassStatus'}
+        expiresAt: {type: string, format: date-time}
+        categories: {type: array, items: {$ref: '#/components/schemas/ShareCategory'}}
+        createdAt: {type: string, format: date-time}
+        revokedAt: {type: string, format: date-time, nullable: true}
+    AdminAccessLogResponse:
+      type: object
+      required: [id, outcome, accessedAt]
+      properties:
+        id: {type: string, format: uuid}
+        passId: {type: string, format: uuid, nullable: true}
+        userId: {type: string, format: uuid, nullable: true}
+        outcome: {$ref: '#/components/schemas/AccessOutcome'}
+        correlationId: {type: string, nullable: true}
+        accessedAt: {type: string, format: date-time}
+    SyntheaImportResponse:
+      type: object
+      required: [resourcesReceived, status, message]
+      properties:
+        resourcesReceived: {type: integer}
+        status: {type: string}
+        message: {type: string}
