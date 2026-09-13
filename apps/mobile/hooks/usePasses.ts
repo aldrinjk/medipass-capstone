@@ -51,6 +51,17 @@ export function usePasses() {
     }
   };
 
+  const rotatePass = async (passId: string): Promise<PassSummary | null> => {
+    try {
+      const updated = await passService.rotatePass(passId);
+      await loadPasses();
+      return updated;
+    } catch (err) {
+      setError(getErrorMessage(err));
+      return null;
+    }
+  };
+
   const loadAuditLogs = async (passId: string): Promise<PassAuditLog[]> => {
     try {
       const logs = await passService.getPassAuditLogs(passId);
@@ -73,6 +84,7 @@ export function usePasses() {
     loadPasses,
     createPass,
     revokePass,
+    rotatePass,
     loadAuditLogs,
   };
 }

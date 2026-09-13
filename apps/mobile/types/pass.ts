@@ -6,6 +6,7 @@ export interface PassSummary {
   passId: string;
   status: PassStatus;
   createdAt?: string;
+  revokedAt?: string;
   expiresAt: string;
   publicUrl: string;
   categories: ShareCategory[];

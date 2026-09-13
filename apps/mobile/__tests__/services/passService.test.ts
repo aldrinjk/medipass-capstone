@@ -28,6 +28,16 @@ describe('passService Integration', () => {
     expect(revoked.status).toBe('REVOKED');
   });
 
+  it('rotates an active pass and generates a new publicUrl', async () => {
+    const categories: ShareCategory[] = ['DEMOGRAPHICS', 'CONDITIONS'];
+    const pass = await passService.createPass(categories, 24);
+    expect(pass.status).toBe('ACTIVE');
+
+    const rotated = await passService.rotatePass(pass.passId);
+    expect(rotated.status).toBe('ACTIVE');
+    expect(rotated.publicUrl).toBeTruthy();
+  });
+
   it('retrieves access audit logs for an active pass', async () => {
     const passes = await passService.getPasses();
     const activePass = passes.find((p) => p.status === 'ACTIVE');
@@ -39,5 +49,10 @@ describe('passService Integration', () => {
         expect(logs[0].timestamp).toBeDefined();
       }
     }
+  });
+
+  it('retrieves patient access logs across all passes', async () => {
+    const allLogs = await passService.getPatientAccessLogs();
+    expect(Array.isArray(allLogs)).toBe(true);
   });
 });

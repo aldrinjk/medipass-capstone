@@ -78,12 +78,61 @@ export const passService = {
     }
   },
 
-  async getPassAuditLogs(passId: string): Promise<PassAuditLog[]> {
+  async rotatePass(passId: string): Promise<PassSummary> {
     try {
-      const response = await apiClient.get<PassAuditLog[]>(`/api/v1/passes/${passId}/audit`);
+      const response = await apiClient.post<PassSummary>(`/api/v1/passes/${passId}/rotate`);
       if (response && response.data) {
+        localPasses = (localPasses || []).map((p) => (p.passId === passId ? response.data : p));
         return response.data;
       }
+      throw new Error('No data');
+    } catch {
+      let rotated: PassSummary | undefined;
+      localPasses = (localPasses || []).map((p) => {
+        if (p.passId === passId) {
+          rotated = {
+            ...p,
+            status: 'ACTIVE',
+            publicUrl: `https://medipass.health/p/${passId}-rotated`,
+          };
+          return rotated;
+        }
+        return p;
+      });
+      return (
+        rotated ?? {
+          passId,
+          status: 'ACTIVE',
+          expiresAt: new Date().toISOString(),
+          publicUrl: `https://medipass.health/p/${passId}-rotated`,
+          categories: [],
+        }
+      );
+    }
+  },
+
+  async getPatientAccessLogs(): Promise<PassAuditLog[]> {
+    try {
+      const response = await apiClient.get<any[]>('/api/v1/patients/me/access-logs');
+      if (response && response.data) {
+        return response.data.map((log: any) => ({
+          id: log.id,
+          passId: log.passId,
+          timestamp: log.accessedAt || log.timestamp,
+          accessStatus: log.outcome || log.accessStatus,
+        }));
+      }
+      return Object.values(MOCK_AUDIT_LOGS).flat();
+    } catch {
+      return Object.values(MOCK_AUDIT_LOGS).flat();
+    }
+  },
+
+  async getPassAuditLogs(passId: string): Promise<PassAuditLog[]> {
+    try {
+      const allLogs = await this.getPatientAccessLogs();
+      const filtered = allLogs.filter((l) => l.passId === passId);
+      if (filtered.length > 0) return filtered;
       return MOCK_AUDIT_LOGS[passId] ?? [];
     } catch {
       return MOCK_AUDIT_LOGS[passId] ?? [];
