@@ -1,8 +1,10 @@
 package com.medipass.common.error;
 
+import com.medipass.audit.AccessLogNotFoundException;
 import com.medipass.auth.EmailAlreadyRegisteredException;
 import com.medipass.auth.InvalidCredentialsException;
 import com.medipass.auth.InvalidRefreshTokenException;
+import com.medipass.pass.PassLifecycleException;
 import com.medipass.pass.PassNotFoundException;
 import com.medipass.pass.PassStatus;
 import com.medipass.pass.PublicPassGoneException;
@@ -15,6 +17,7 @@ import java.util.Map;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -54,6 +57,21 @@ public class GlobalExceptionHandler {
                         HttpStatus.BAD_REQUEST.value(),
                         "VALIDATION_ERROR",
                         "Request validation failed.",
+                        request.getRequestURI()
+                )
+        );
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiError> handleUnreadableRequestBody(
+            HttpMessageNotReadableException ex,
+            HttpServletRequest request
+    ) {
+        return ResponseEntity.badRequest().body(
+                ApiError.of(
+                        HttpStatus.BAD_REQUEST.value(),
+                        "INVALID_REQUEST_BODY",
+                        "Request body is malformed or unreadable.",
                         request.getRequestURI()
                 )
         );
@@ -128,6 +146,36 @@ public class GlobalExceptionHandler {
                 ApiError.of(
                         HttpStatus.NOT_FOUND.value(),
                         "PASS_NOT_FOUND",
+                        ex.getMessage(),
+                        request.getRequestURI()
+                )
+        );
+    }
+
+    @ExceptionHandler(PassLifecycleException.class)
+    public ResponseEntity<ApiError> handlePassLifecycle(
+            PassLifecycleException ex,
+            HttpServletRequest request
+    ) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                ApiError.of(
+                        HttpStatus.CONFLICT.value(),
+                        "PASS_LIFECYCLE_CONFLICT",
+                        ex.getMessage(),
+                        request.getRequestURI()
+                )
+        );
+    }
+
+    @ExceptionHandler(AccessLogNotFoundException.class)
+    public ResponseEntity<ApiError> handleAccessLogNotFound(
+            AccessLogNotFoundException ex,
+            HttpServletRequest request
+    ) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                ApiError.of(
+                        HttpStatus.NOT_FOUND.value(),
+                        "ACCESS_LOG_NOT_FOUND",
                         ex.getMessage(),
                         request.getRequestURI()
                 )

@@ -76,6 +76,29 @@ public class EmergencyPass {
         this.status = PassStatus.ACTIVE;
     }
 
+    public void revoke(Instant now) {
+        if (status == PassStatus.ACTIVE) {
+            status = PassStatus.REVOKED;
+            revokedAt = now;
+            updatedAt = now;
+        }
+    }
+
+    public void expire(Instant now) {
+        if (status == PassStatus.ACTIVE) {
+            status = PassStatus.EXPIRED;
+            updatedAt = now;
+        }
+    }
+
+    public void rotateToken(String newTokenHash, Instant now) {
+        if (status != PassStatus.ACTIVE) {
+            throw new PassLifecycleException("Only an active pass can be rotated.");
+        }
+        tokenHash = newTokenHash;
+        updatedAt = now;
+    }
+
     public UUID getId() {
         return id;
     }
