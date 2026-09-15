@@ -11,7 +11,7 @@ import {
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { allergySchema, AllergyFormData } from '../../types/validation';
-import { Allergy, AllergySeverity, AllergyStatus } from '../../types/clinical';
+import { Allergy } from '../../types/clinical';
 import { Input, Button } from '../../components';
 
 interface AllergyFormModalProps {
@@ -22,8 +22,7 @@ interface AllergyFormModalProps {
   isSubmitting?: boolean;
 }
 
-const SEVERITIES: AllergySeverity[] = ['MILD', 'MODERATE', 'SEVERE'];
-const STATUSES: AllergyStatus[] = ['ACTIVE', 'INACTIVE', 'RESOLVED'];
+const SEVERITIES = ['MILD', 'MODERATE', 'SEVERE'];
 
 export const AllergyFormModal: React.FC<AllergyFormModalProps> = ({
   isVisible,
@@ -41,9 +40,8 @@ export const AllergyFormModal: React.FC<AllergyFormModalProps> = ({
     resolver: zodResolver(allergySchema),
     defaultValues: {
       substance: '',
-      severity: 'MODERATE',
+      severity: '',
       reaction: '',
-      status: 'ACTIVE',
     },
   });
 
@@ -51,16 +49,14 @@ export const AllergyFormModal: React.FC<AllergyFormModalProps> = ({
     if (allergy) {
       reset({
         substance: allergy.substance,
-        severity: allergy.severity,
+        severity: allergy.severity || '',
         reaction: allergy.reaction || '',
-        status: allergy.status,
       });
     } else {
       reset({
         substance: '',
-        severity: 'MODERATE',
+        severity: '',
         reaction: '',
-        status: 'ACTIVE',
       });
     }
   }, [allergy, reset, isVisible]);
@@ -118,7 +114,7 @@ export const AllergyFormModal: React.FC<AllergyFormModalProps> = ({
               name="severity"
               render={({ field: { onChange, value } }) => (
                 <View style={styles.pickerSection}>
-                  <Text style={styles.sectionLabel}>Severity Rating *</Text>
+                  <Text style={styles.sectionLabel}>Severity</Text>
                   <View style={styles.pillContainer}>
                     {SEVERITIES.map((sev) => (
                       <Button
@@ -147,28 +143,6 @@ export const AllergyFormModal: React.FC<AllergyFormModalProps> = ({
                   value={value}
                   error={errors.reaction?.message}
                 />
-              )}
-            />
-
-            <Controller
-              control={control}
-              name="status"
-              render={({ field: { onChange, value } }) => (
-                <View style={styles.pickerSection}>
-                  <Text style={styles.sectionLabel}>Clinical Status</Text>
-                  <View style={styles.pillContainer}>
-                    {STATUSES.map((st) => (
-                      <Button
-                        key={st}
-                        title={st}
-                        size="sm"
-                        variant={value === st ? 'primary' : 'outline'}
-                        onPress={() => onChange(st)}
-                        style={styles.pill}
-                      />
-                    ))}
-                  </View>
-                </View>
               )}
             />
 

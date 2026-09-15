@@ -1,12 +1,18 @@
-import axios, { AxiosError, AxiosRequestConfig, InternalAxiosRequestConfig } from 'axios';
+import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import {
   getAccessToken,
   getRefreshToken,
   setAccessToken,
+  setRefreshToken,
   clearAuthSession,
 } from './secureStore';
+import { ApiErrorResponse, AuthTokensResponse } from '../types';
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:8080';
+
+export const isMockEnabled = (): boolean => {
+  return process.env.EXPO_PUBLIC_USE_MOCKS === 'true';
+};
 
 export const apiClient = axios.create({
   baseURL: BASE_URL,
@@ -54,7 +60,7 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response Interceptor: Handle 401 & Token Refresh
+// Response Interceptor: Handle 401 & Token Refresh with Refresh Token Rotation
 apiClient.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
@@ -88,12 +94,13 @@ apiClient.interceptors.response.use(
       }
 
       try {
-        const response = await axios.post(`${BASE_URL}/api/v1/auth/refresh`, {
+        const response = await axios.post<AuthTokensResponse>(`${BASE_URL}/api/v1/auth/refresh`, {
           refreshToken,
         });
 
         const newAccessToken = response.data.accessToken;
-        await setAccessToken(newAccessToken);
+        const newRefreshToken = response.data.refreshToken;
+        await persistRotatedTokens(newAccessToken, newRefreshToken);
 
         apiClient.defaults.headers.common.Authorization = `Bearer ${newAccessToken}`;
         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
@@ -113,11 +120,27 @@ apiClient.interceptors.response.use(
   }
 );
 
+export async function persistRotatedTokens(
+  accessToken: string,
+  refreshToken: string
+): Promise<void> {
+  await setAccessToken(accessToken);
+  await setRefreshToken(refreshToken);
+}
+
 export function getErrorMessage(error: unknown): string {
   if (axios.isAxiosError(error)) {
-    const data = error.response?.data as { message?: string; errors?: string[] } | undefined;
-    if (data?.message) return data.message;
-    if (data?.errors && data.errors.length > 0) return data.errors.join(', ');
+    const data = error.response?.data as ApiErrorResponse | undefined;
+    if (data) {
+      if (data.validationErrors && typeof data.validationErrors === 'object') {
+        const errorEntries = Object.values(data.validationErrors);
+        if (errorEntries.length > 0) {
+          return errorEntries.join(', ');
+        }
+      }
+      if (data.message) return data.message;
+      if (data.code) return `Error: ${data.code}`;
+    }
     if (error.message) return error.message;
   }
   if (error instanceof Error) return error.message;

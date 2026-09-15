@@ -1,20 +1,26 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { PassSummary } from '../../types/pass';
+import { PassMetadata } from '../../types/pass';
 import { Card, Badge, Button } from '../../components';
 
 interface PassSummaryCardProps {
-  pass: PassSummary;
+  pass: PassMetadata;
+  publicUrl?: string;
   onRevoke: (passId: string) => void;
+  onRotate?: (passId: string) => void;
   onViewLogs: (passId: string) => void;
   isRevoking?: boolean;
+  isRotating?: boolean;
 }
 
 export const PassSummaryCard: React.FC<PassSummaryCardProps> = ({
   pass,
+  publicUrl,
   onRevoke,
+  onRotate,
   onViewLogs,
   isRevoking = false,
+  isRotating = false,
 }) => {
   const getBadgeVariant = (status: string) => {
     switch (status) {
@@ -53,12 +59,19 @@ export const PassSummaryCard: React.FC<PassSummaryCardProps> = ({
         </Text>
       </View>
 
-      <View style={styles.detailRow}>
-        <Text style={styles.label}>Public URL:</Text>
-        <Text style={styles.urlText} numberOfLines={1} ellipsizeMode="middle">
-          {pass.publicUrl}
+      {publicUrl ? (
+        <View style={styles.detailRow}>
+          <Text style={styles.label}>Public URL:</Text>
+          <Text style={styles.urlText} numberOfLines={2} ellipsizeMode="middle">
+            {publicUrl}
+          </Text>
+        </View>
+      ) : (
+        <Text style={styles.hint}>
+          The public URL is only returned when you create or rotate a pass. Rotate the
+          link to generate a new URL.
         </Text>
-      </View>
+      )}
 
       <View style={styles.actions}>
         <Button
@@ -68,6 +81,16 @@ export const PassSummaryCard: React.FC<PassSummaryCardProps> = ({
           onPress={() => onViewLogs(pass.passId)}
           style={styles.actionBtn}
         />
+        {isActive && onRotate ? (
+          <Button
+            title="Rotate Link"
+            variant="outline"
+            size="sm"
+            onPress={() => onRotate(pass.passId)}
+            isLoading={isRotating}
+            style={styles.actionBtn}
+          />
+        ) : null}
         {isActive && (
           <Button
             title="Revoke Pass"
@@ -127,9 +150,16 @@ const styles = StyleSheet.create({
     color: '#2563EB',
     flex: 1,
   },
+  hint: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 8,
+    lineHeight: 16,
+  },
   actions: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
+    flexWrap: 'wrap',
     gap: 8,
     marginTop: 12,
     borderTopWidth: 1,

@@ -6,32 +6,38 @@ export interface LoginRequest {
 export interface RegisterRequest {
   email: string;
   password: string;
-  firstName: string;
-  lastName: string;
+}
+
+export interface RegisterResponse {
+  id: string;
+  email: string;
+  role: string;
 }
 
 export interface RefreshTokenRequest {
   refreshToken: string;
 }
 
-export interface AuthResponse {
+export interface AuthTokensResponse {
   accessToken: string;
   refreshToken: string;
   tokenType: string;
-  expiresIn: number;
-  patientId: string;
+  expiresInSeconds: number;
 }
 
+export type AuthResponse = AuthTokensResponse;
+
 export interface UserSession {
-  patientId: string;
-  email?: string;
-  firstName?: string;
-  lastName?: string;
+  id: string;
+  email: string;
+  role: string;
 }
 
 export interface ApiErrorResponse {
-  status: number;
-  message: string;
-  errors?: string[];
   timestamp?: string;
+  status?: number;
+  code?: string;
+  message?: string;
+  path?: string;
+  validationErrors?: Record<string, string>;
 }

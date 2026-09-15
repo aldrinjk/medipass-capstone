@@ -17,9 +17,7 @@ export default function EmergencyContactScreen() {
       const success = await updateEmergencyContact({
         name: data.name,
         relationship: data.relationship,
-        phoneNumber: data.phoneNumber,
-        alternatePhone: data.alternatePhone || undefined,
-        email: data.email || undefined,
+        phone: data.phone,
       });
       if (success) {
         setSuccessMessage('Emergency contact saved successfully');

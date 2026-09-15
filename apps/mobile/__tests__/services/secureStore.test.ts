@@ -2,7 +2,7 @@ import {
   saveAuthSession,
   getAccessToken,
   getRefreshToken,
-  getPatientId,
+  getUserEmail,
   clearAuthSession,
 } from '../../services/secureStore';
 
@@ -15,28 +15,20 @@ describe('secureStore Service', () => {
     await clearAuthSession();
   });
 
-  it('saves and retrieves access token, refresh token, and patient ID', async () => {
-    await saveAuthSession('test-access-token', 'test-refresh-token', 'pat-12345', 'test@example.com');
+  it('saves and retrieves access token, refresh token, and email', async () => {
+    await saveAuthSession('test-access-token', 'test-refresh-token', 'test@example.com');
 
-    const accessToken = await getAccessToken();
-    const refreshToken = await getRefreshToken();
-    const patientId = await getPatientId();
-
-    expect(accessToken).toBe('test-access-token');
-    expect(refreshToken).toBe('test-refresh-token');
-    expect(patientId).toBe('pat-12345');
+    expect(await getAccessToken()).toBe('test-access-token');
+    expect(await getRefreshToken()).toBe('test-refresh-token');
+    expect(await getUserEmail()).toBe('test@example.com');
   });
 
   it('clears all session keys on logout', async () => {
-    await saveAuthSession('token-a', 'token-b', 'pat-999');
+    await saveAuthSession('token-a', 'token-b', 'test@example.com');
     await clearAuthSession();
 
-    const accessToken = await getAccessToken();
-    const refreshToken = await getRefreshToken();
-    const patientId = await getPatientId();
-
-    expect(accessToken).toBeNull();
-    expect(refreshToken).toBeNull();
-    expect(patientId).toBeNull();
+    expect(await getAccessToken()).toBeNull();
+    expect(await getRefreshToken()).toBeNull();
+    expect(await getUserEmail()).toBeNull();
   });
 });

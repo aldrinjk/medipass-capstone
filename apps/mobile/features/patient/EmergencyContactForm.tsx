@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, StyleSheet, ScrollView } from 'react-native';
+import React, { useEffect } from 'react';
+import { StyleSheet, ScrollView } from 'react-native';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { emergencyContactSchema, EmergencyContactFormData } from '../../types/validation';
@@ -20,17 +20,24 @@ export const EmergencyContactForm: React.FC<EmergencyContactFormProps> = ({
   const {
     control,
     handleSubmit,
+    reset,
     formState: { errors },
   } = useForm<EmergencyContactFormData>({
     resolver: zodResolver(emergencyContactSchema),
     defaultValues: {
       name: initialData?.name || '',
       relationship: initialData?.relationship || '',
-      phoneNumber: initialData?.phoneNumber || '',
-      alternatePhone: initialData?.alternatePhone || '',
-      email: initialData?.email || '',
+      phone: initialData?.phone || '',
     },
   });
+
+  useEffect(() => {
+    reset({
+      name: initialData?.name || '',
+      relationship: initialData?.relationship || '',
+      phone: initialData?.phone || '',
+    });
+  }, [initialData, reset]);
 
   return (
     <Card>
@@ -67,49 +74,16 @@ export const EmergencyContactForm: React.FC<EmergencyContactFormProps> = ({
 
         <Controller
           control={control}
-          name="phoneNumber"
+          name="phone"
           render={({ field: { onChange, onBlur, value } }) => (
             <Input
-              label="Primary Phone Number *"
+              label="Phone Number *"
               placeholder="+1 (555) 123-4567"
               keyboardType="phone-pad"
               onBlur={onBlur}
               onChangeText={onChange}
               value={value}
-              error={errors.phoneNumber?.message}
-            />
-          )}
-        />
-
-        <Controller
-          control={control}
-          name="alternatePhone"
-          render={({ field: { onChange, onBlur, value } }) => (
-            <Input
-              label="Alternate Phone Number"
-              placeholder="+1 (555) 987-6543"
-              keyboardType="phone-pad"
-              onBlur={onBlur}
-              onChangeText={onChange}
-              value={value}
-              error={errors.alternatePhone?.message}
-            />
-          )}
-        />
-
-        <Controller
-          control={control}
-          name="email"
-          render={({ field: { onChange, onBlur, value } }) => (
-            <Input
-              label="Email Address"
-              placeholder="emergency.contact@example.org"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              onBlur={onBlur}
-              onChangeText={onChange}
-              value={value}
-              error={errors.email?.message}
+              error={errors.phone?.message}
             />
           )}
         />

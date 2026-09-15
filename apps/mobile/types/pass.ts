@@ -2,11 +2,26 @@ import { ShareCategory } from './sharing';
 
 export type PassStatus = 'ACTIVE' | 'REVOKED' | 'EXPIRED';
 
-export interface PassSummary {
+export interface PassMetadata {
   passId: string;
   status: PassStatus;
-  createdAt?: string;
-  revokedAt?: string;
+  expiresAt: string;
+  categories: ShareCategory[];
+  createdAt: string;
+  revokedAt?: string | null;
+}
+
+export interface CreatePassResponse {
+  passId: string;
+  status: PassStatus;
+  expiresAt: string;
+  publicUrl: string;
+  categories: ShareCategory[];
+}
+
+export interface RotatePassResponse {
+  passId: string;
+  status: PassStatus;
   expiresAt: string;
   publicUrl: string;
   categories: ShareCategory[];
@@ -17,13 +32,15 @@ export interface CreatePassRequest {
   expiresAt: string;
 }
 
-export type AccessAuditStatus = 'SUCCESS' | 'EXPIRED' | 'REVOKED' | 'INVALID';
+export type AccessOutcome = 'SUCCESS' | 'EXPIRED' | 'REVOKED' | 'INVALID';
 
-export interface PassAuditLog {
-  id?: string;
+export interface AccessLogResponse {
+  id: string;
   passId: string;
-  timestamp: string;
-  accessStatus: AccessAuditStatus;
-  ipAddressTruncated?: string;
-  userAgent?: string;
+  outcome: AccessOutcome;
+  accessedAt: string;
 }
+
+// Type alias for backwards compatibility
+export type PassSummary = PassMetadata;
+export type PassAuditLog = AccessLogResponse;

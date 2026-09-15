@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, StyleSheet, ScrollView, Text } from 'react-native';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { demographicsSchema, DemographicsFormData } from '../../types/validation';
-import { PatientProfile, Gender, BloodType } from '../../types/patient';
+import { PatientProfile } from '../../types/patient';
 import { Input, Button, Card } from '../../components';
 
 interface DemographicsFormProps {
@@ -12,8 +12,7 @@ interface DemographicsFormProps {
   isSubmitting?: boolean;
 }
 
-const GENDERS: Gender[] = ['MALE', 'FEMALE', 'OTHER', 'UNKNOWN'];
-const BLOOD_TYPES: BloodType[] = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-', 'UNKNOWN'];
+const GENDERS = ['MALE', 'FEMALE', 'OTHER', 'UNKNOWN'];
 
 export const DemographicsForm: React.FC<DemographicsFormProps> = ({
   initialData,
@@ -23,64 +22,56 @@ export const DemographicsForm: React.FC<DemographicsFormProps> = ({
   const {
     control,
     handleSubmit,
+    reset,
     formState: { errors },
   } = useForm<DemographicsFormData>({
     resolver: zodResolver(demographicsSchema),
     defaultValues: {
-      firstName: initialData?.firstName || '',
-      lastName: initialData?.lastName || '',
-      dateOfBirth: initialData?.dateOfBirth || '',
-      gender: initialData?.gender || 'UNKNOWN',
-      bloodType: initialData?.bloodType || 'UNKNOWN',
+      fullName: initialData?.fullName || '',
+      birthDate: initialData?.birthDate || '',
+      gender: initialData?.gender || '',
       phone: initialData?.phone || '',
-      address: initialData?.address || '',
     },
   });
+
+  useEffect(() => {
+    reset({
+      fullName: initialData?.fullName || '',
+      birthDate: initialData?.birthDate || '',
+      gender: initialData?.gender || '',
+      phone: initialData?.phone || '',
+    });
+  }, [initialData, reset]);
 
   return (
     <Card>
       <ScrollView keyboardShouldPersistTaps="handled">
         <Controller
           control={control}
-          name="firstName"
+          name="fullName"
           render={({ field: { onChange, onBlur, value } }) => (
             <Input
-              label="First Name *"
-              placeholder="e.g. Jane"
+              label="Full Name *"
+              placeholder="e.g. Jane Doe"
               onBlur={onBlur}
               onChangeText={onChange}
               value={value}
-              error={errors.firstName?.message}
+              error={errors.fullName?.message}
             />
           )}
         />
 
         <Controller
           control={control}
-          name="lastName"
+          name="birthDate"
           render={({ field: { onChange, onBlur, value } }) => (
             <Input
-              label="Last Name *"
-              placeholder="e.g. Doe"
-              onBlur={onBlur}
-              onChangeText={onChange}
-              value={value}
-              error={errors.lastName?.message}
-            />
-          )}
-        />
-
-        <Controller
-          control={control}
-          name="dateOfBirth"
-          render={({ field: { onChange, onBlur, value } }) => (
-            <Input
-              label="Date of Birth (YYYY-MM-DD)"
+              label="Birth Date (YYYY-MM-DD)"
               placeholder="1990-01-15"
               onBlur={onBlur}
               onChangeText={onChange}
               value={value}
-              error={errors.dateOfBirth?.message}
+              error={errors.birthDate?.message}
             />
           )}
         />
@@ -103,28 +94,6 @@ export const DemographicsForm: React.FC<DemographicsFormProps> = ({
 
         <Controller
           control={control}
-          name="bloodType"
-          render={({ field: { onChange, value } }) => (
-            <View style={styles.pickerSection}>
-              <Text style={styles.sectionLabel}>Blood Type</Text>
-              <View style={styles.pillContainer}>
-                {BLOOD_TYPES.map((bt) => (
-                  <Button
-                    key={bt}
-                    title={bt}
-                    size="sm"
-                    variant={value === bt ? 'primary' : 'outline'}
-                    onPress={() => onChange(bt)}
-                    style={styles.pill}
-                  />
-                ))}
-              </View>
-            </View>
-          )}
-        />
-
-        <Controller
-          control={control}
           name="gender"
           render={({ field: { onChange, value } }) => (
             <View style={styles.pickerSection}>
@@ -142,23 +111,6 @@ export const DemographicsForm: React.FC<DemographicsFormProps> = ({
                 ))}
               </View>
             </View>
-          )}
-        />
-
-        <Controller
-          control={control}
-          name="address"
-          render={({ field: { onChange, onBlur, value } }) => (
-            <Input
-              label="Residential Address"
-              placeholder="Street, City, State, ZIP"
-              multiline
-              numberOfLines={3}
-              onBlur={onBlur}
-              onChangeText={onChange}
-              value={value}
-              error={errors.address?.message}
-            />
           )}
         />
 

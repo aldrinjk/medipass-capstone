@@ -40,7 +40,7 @@ apps/mobile/
 │       └── profile/              # Clinical profile nested stack
 │           ├── _layout.tsx
 │           ├── index.tsx         # Clinical profile hub menu
-│           ├── demographics.tsx  # View/edit demographics, vitals, blood type
+│           ├── demographics.tsx  # View/edit full name, birth date, gender, phone
 │           ├── allergies.tsx     # Allergy CRUD with severity badges & modal
 │           ├── medications.tsx   # Medication CRUD with dosage/frequency & modal
 │           ├── conditions.tsx    # Conditions CRUD with clinical status & modal
@@ -62,7 +62,7 @@ apps/mobile/
 │   ├── emergencyContactService.ts # Emergency contact GET/PUT
 │   ├── sharingService.ts         # Sharing preferences GET/PUT
 │   ├── passService.ts            # Passes & access audit logs GET
-│   └── mockData.ts               # Synthetic fallback dataset
+│   └── mockData.ts               # Opt-in synthetic dataset (EXPO_PUBLIC_USE_MOCKS=true)
 ├── hooks/                        # Custom React hooks (useAuth, usePatientProfile, etc.)
 ├── types/                        # Domain models, enums & Zod validation schemas
 └── __tests__/                    # Automated unit & integration tests
@@ -82,8 +82,10 @@ apps/mobile/
 # 1. Navigate to apps/mobile
 cd apps/mobile
 
-# 2. Copy environment template
+# 2. Copy environment template and set your API URL
 cp .env.example .env
+# Simulator: http://localhost:8080
+# Physical phone on Expo Go: http://<laptop-LAN-IP>:8080 (same Wi-Fi)
 
 # 3. Install dependencies
 npm install --legacy-peer-deps
@@ -98,22 +100,28 @@ npm run typecheck
 npx expo start
 ```
 
-### Running on Physical Android Device
-1. Install **Expo Go** from Google Play Store on your Android phone.
-2. Ensure your phone and computer are on the same Wi-Fi network (or use `npx expo start --tunnel`).
-3. Scan the QR code in your terminal using the Expo Go camera/scanner.
+### Running on a Physical Device (Expo Go)
+1. Install **Expo Go** from the App Store or Google Play.
+2. Put the phone and laptop on the **same Wi-Fi**.
+3. Set `EXPO_PUBLIC_API_BASE_URL=http://<laptop-LAN-IP>:8080` in `.env`.
+   - `localhost` on the phone is the phone itself, not the laptop API.
+   - `npx expo start --tunnel` only tunnels the Expo bundler. It does **not** make `localhost:8080` on the phone reach Spring Boot on your laptop.
+4. Scan the Expo QR code.
+
+Keep `EXPO_PUBLIC_USE_MOCKS=false` unless you explicitly want local synthetic data. Mock mode never turns on just because `__DEV__` is true or the API URL is missing.
 
 ---
 
 ## 4. API Contract & Consumed Endpoints
 
-All calls are routed to `EXPO_PUBLIC_API_BASE_URL` (default: `http://localhost:8080`).
+All calls are routed to `EXPO_PUBLIC_API_BASE_URL`. On a simulator this is often `http://localhost:8080`. On a physical device it must be `http://<laptop-LAN-IP>:8080`.
 
 | Category | Endpoint | Method | Purpose |
 | :--- | :--- | :--- | :--- |
 | **Auth** | `/api/v1/auth/register` | `POST` | Register new patient account |
 | | `/api/v1/auth/login` | `POST` | Patient login (stores tokens in SecureStore) |
-| | `/api/v1/auth/refresh` | `POST` | Silent JWT token refresh |
+| | `/api/v1/auth/me` | `GET` | Validate stored tokens and load `{ id, email, role }` |
+| | `/api/v1/auth/refresh` | `POST` | Rotate refresh token; persist both `accessToken` and `refreshToken` |
 | | `/api/v1/auth/logout` | `POST` | Session termination & secure wipe |
 | **Profile** | `/api/v1/patients/me` | `GET`, `PUT` | View / update patient demographics |
 | **Allergies** | `/api/v1/patients/me/allergies` | `GET`, `POST` | List / add patient allergies |
@@ -126,7 +134,8 @@ All calls are routed to `EXPO_PUBLIC_API_BASE_URL` (default: `http://localhost:8
 | **Sharing** | `/api/v1/patients/me/sharing-preferences` | `GET`, `PUT` | Read / update shareable category toggles |
 | **Passes** | `/api/v1/passes` | `GET`, `POST` | List passes & create new pass |
 | | `/api/v1/passes/{id}/revoke` | `POST` | Revoke active emergency pass |
-| | `/api/v1/passes/{id}/audit` | `GET` | Access audit trail for pass |
+| | `/api/v1/passes/{id}/rotate` | `POST` | Rotate pass token and return a new `publicUrl` |
+| **Access logs** | `/api/v1/patients/me/access-logs` | `GET` | Access outcomes (`id`, `passId`, `outcome`, `accessedAt`) |
 
 ### Frozen Enums
 - **`ShareCategory`**: `DEMOGRAPHICS` | `ALLERGIES` | `MEDICATIONS` | `CONDITIONS` | `EMERGENCY_CONTACT`
@@ -137,28 +146,27 @@ All calls are routed to `EXPO_PUBLIC_API_BASE_URL` (default: `http://localhost:8
 ## 5. Verification & Acceptance Checklist
 
 - [x] **Authentication & Session**:
-  - Patient registration with validation (matching passwords, valid email).
-  - Login with JWT token storage via Expo SecureStore.
-  - Automatic silent session restoration upon reopening app.
+  - Register with email + password, then login, save tokens, and load `/api/v1/auth/me`.
+  - Login stores `accessToken` and `refreshToken` in Expo SecureStore (no patient ID).
+  - Session restore validates stored tokens with `GET /api/v1/auth/me`.
+  - Refresh token rotation persists both tokens from `/api/v1/auth/refresh`.
   - Full logout with token erasure.
 - [x] **Dashboard Readiness**:
-  - Profile readiness calculation (0-100%) tracking demographics, allergies, medications, conditions, and contact.
-  - Quick statistics grid with deep links.
+  - Profile readiness from backend fields: full name, birth date, gender, phone, allergies, medications, conditions, and emergency contact.
 - [x] **Clinical Profile CRUD**:
-  - Demographics view/edit with ISO date validation and blood type pills.
-  - Allergy list and modal CRUD with severity badges (`SEVERE`, `MODERATE`, `MILD`).
-  - Medication list and modal CRUD with dosage, frequency, route, and instructions.
-  - Condition list and modal CRUD with clinical statuses.
-  - Emergency contact single view/edit workflow.
+  - Demographics: `fullName`, `birthDate`, `gender`, `phone`.
+  - Allergies: `substance`, `reaction`, `severity`.
+  - Medications: `name`, `dosage`, `frequency`.
+  - Conditions: `name`, `status`, `notes`.
+  - Emergency contact: `name`, `relationship`, `phone`.
 - [x] **Sharing Preferences**:
-  - Toggle list covering all 5 categories with explicit privacy notes.
-  - Persistent save to Spring Boot endpoint.
+  - Toggle list covering all 5 categories with descriptions that match backend fields.
 - [x] **Pass Management & Navigation**:
-  - Active pass list and duration selector.
-  - Revocation action.
-  - Access audit log inspection modal showing timestamp, status, and truncated IP.
-- [x] **Offline / Demonstration Support**:
-  - Curated synthetic fallback dataset (`mockData.ts`) matching OpenAPI schemas when local backend is not yet started.
+  - Create, revoke, and rotate active passes.
+  - `publicUrl` is shown only after create/rotate (list metadata does not include it).
+  - Access logs show `accessedAt` and `outcome` (no IP or user-agent).
+- [x] **Mocks**:
+  - Opt-in only via `EXPO_PUBLIC_USE_MOCKS=true`.
 - [x] **Automated Tests**:
-  - 27 unit and integration tests passing in Jest (`npm test`).
-  - Strict TypeScript check passing (`npm run typecheck`).
+  - Contract tests for auth, refresh rotation, API errors, DTOs, and no silent mocks.
+  - Strict TypeScript check (`npm run typecheck`).

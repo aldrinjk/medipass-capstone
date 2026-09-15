@@ -3,7 +3,6 @@ import { Platform } from 'react-native';
 
 const ACCESS_TOKEN_KEY = 'medipass_access_token';
 const REFRESH_TOKEN_KEY = 'medipass_refresh_token';
-const PATIENT_ID_KEY = 'medipass_patient_id';
 const USER_EMAIL_KEY = 'medipass_user_email';
 
 // Memory fallback for web or environments where SecureStore isn't native
@@ -49,12 +48,10 @@ export async function deleteItem(key: string): Promise<void> {
 export async function saveAuthSession(
   accessToken: string,
   refreshToken: string,
-  patientId: string,
   email?: string
 ): Promise<void> {
   await setItem(ACCESS_TOKEN_KEY, accessToken);
   await setItem(REFRESH_TOKEN_KEY, refreshToken);
-  await setItem(PATIENT_ID_KEY, patientId);
   if (email) {
     await setItem(USER_EMAIL_KEY, email);
   }
@@ -76,10 +73,6 @@ export async function setRefreshToken(token: string): Promise<void> {
   await setItem(REFRESH_TOKEN_KEY, token);
 }
 
-export async function getPatientId(): Promise<string | null> {
-  return await getItem(PATIENT_ID_KEY);
-}
-
 export async function getUserEmail(): Promise<string | null> {
   return await getItem(USER_EMAIL_KEY);
 }
@@ -87,7 +80,6 @@ export async function getUserEmail(): Promise<string | null> {
 export async function clearAuthSession(): Promise<void> {
   await deleteItem(ACCESS_TOKEN_KEY);
   await deleteItem(REFRESH_TOKEN_KEY);
-  await deleteItem(PATIENT_ID_KEY);
   await deleteItem(USER_EMAIL_KEY);
   memoryStorage.clear();
 }

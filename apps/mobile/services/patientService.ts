@@ -1,4 +1,4 @@
-import { apiClient } from './apiClient';
+import { apiClient, isMockEnabled } from './apiClient';
 import {
   PatientProfile,
   UpdatePatientProfileRequest,
@@ -10,27 +10,25 @@ let localProfileCache: PatientProfile = { ...MOCK_PATIENT_PROFILE };
 
 export const patientService = {
   async getProfile(): Promise<PatientProfile> {
-    try {
-      const response = await apiClient.get<PatientProfile>('/api/v1/patients/me');
-      localProfileCache = response.data;
-      return response.data;
-    } catch {
-      return localProfileCache;
+    if (isMockEnabled()) {
+      return { ...localProfileCache };
     }
+    const response = await apiClient.get<PatientProfile>('/api/v1/patients/me');
+    localProfileCache = response.data;
+    return response.data;
   },
 
   async updateProfile(updates: UpdatePatientProfileRequest): Promise<PatientProfile> {
-    try {
-      const response = await apiClient.put<PatientProfile>('/api/v1/patients/me', updates);
-      localProfileCache = response.data;
-      return response.data;
-    } catch {
+    if (isMockEnabled()) {
       localProfileCache = {
         ...localProfileCache,
         ...updates,
       };
-      return localProfileCache;
+      return { ...localProfileCache };
     }
+    const response = await apiClient.put<PatientProfile>('/api/v1/patients/me', updates);
+    localProfileCache = response.data;
+    return response.data;
   },
 
   calculateCompleteness(
@@ -41,11 +39,10 @@ export const patientService = {
     hasEmergencyContact: boolean
   ): CategoryCompleteness {
     const hasDemographics = Boolean(
-      profile?.firstName &&
-      profile?.lastName &&
-      profile?.dateOfBirth &&
-      profile?.bloodType &&
-      profile?.gender
+      profile?.fullName?.trim() &&
+      profile?.birthDate &&
+      profile?.gender &&
+      profile?.phone
     );
 
     const hasAllergies = allergiesCount > 0;

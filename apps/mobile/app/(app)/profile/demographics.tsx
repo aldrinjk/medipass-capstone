@@ -17,13 +17,10 @@ export default function DemographicsScreen() {
     setSuccessMessage(null);
     try {
       const success = await updateProfile({
-        firstName: data.firstName,
-        lastName: data.lastName,
-        dateOfBirth: data.dateOfBirth || undefined,
-        gender: data.gender,
-        bloodType: data.bloodType,
-        phone: data.phone || undefined,
-        address: data.address || undefined,
+        fullName: data.fullName,
+        birthDate: data.birthDate || null,
+        gender: data.gender || null,
+        phone: data.phone || null,
       });
       if (success) {
         setSuccessMessage('Patient demographics updated successfully');
@@ -40,10 +37,10 @@ export default function DemographicsScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.pageTitle}>Demographics & Vitals</Text>
+      <Text style={styles.pageTitle}>Demographics</Text>
       <Text style={styles.pageSubtitle}>
-        First responders verify your identity and blood type from these details in critical trauma
-        scenarios.
+        First responders verify your identity from your full name, birth date, gender, and phone
+        number.
       </Text>
 
       {error ? <ErrorBanner message={error} /> : null}

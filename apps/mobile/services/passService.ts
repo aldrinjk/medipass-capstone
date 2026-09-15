@@ -1,141 +1,119 @@
-import { apiClient } from './apiClient';
+import { apiClient, isMockEnabled } from './apiClient';
 import {
-  PassSummary,
+  PassMetadata,
+  CreatePassResponse,
+  RotatePassResponse,
   CreatePassRequest,
-  PassAuditLog,
+  AccessLogResponse,
   ShareCategory,
 } from '../types';
 import { MOCK_PASSES, MOCK_AUDIT_LOGS } from './mockData';
 
-let localPasses: PassSummary[] = MOCK_PASSES ? [...MOCK_PASSES] : [];
+let localPasses: PassMetadata[] = [...MOCK_PASSES];
 
 export const passService = {
-  async getPasses(): Promise<PassSummary[]> {
-    try {
-      const response = await apiClient.get<PassSummary[]>('/api/v1/passes');
-      if (response && response.data) {
-        localPasses = response.data;
-        return response.data;
-      }
-      return [...(localPasses || [])];
-    } catch (err) {
-      return [...(localPasses || [])];
+  async getPasses(): Promise<PassMetadata[]> {
+    if (isMockEnabled()) {
+      return [...localPasses];
     }
+    const response = await apiClient.get<PassMetadata[]>('/api/v1/passes');
+    localPasses = response.data;
+    return response.data;
   },
 
-  async createPass(categories: ShareCategory[], expiresInHours: number = 24): Promise<PassSummary> {
+  async createPass(
+    categories: ShareCategory[],
+    expiresInHours: number = 24
+  ): Promise<CreatePassResponse> {
     const expiresAt = new Date(Date.now() + expiresInHours * 60 * 60 * 1000).toISOString();
     const payload: CreatePassRequest = { categories, expiresAt };
 
-    try {
-      const response = await apiClient.post<PassSummary>('/api/v1/passes', payload);
-      if (response && response.data) {
-        localPasses = localPasses || [];
-        localPasses.unshift(response.data);
-        return response.data;
-      }
-      throw new Error('No data');
-    } catch {
+    if (isMockEnabled()) {
       const passId = `pass-${Math.random().toString(36).substring(2, 8)}`;
-      const mockPass: PassSummary = {
+      const mockCreated: CreatePassResponse = {
         passId,
         status: 'ACTIVE',
-        createdAt: new Date().toISOString(),
         expiresAt,
         publicUrl: `https://medipass.health/p/${passId}`,
         categories,
       };
-      localPasses = localPasses || [];
-      localPasses.unshift(mockPass);
-      return mockPass;
+      const newMetadata: PassMetadata = {
+        passId,
+        status: 'ACTIVE',
+        expiresAt,
+        categories,
+        createdAt: new Date().toISOString(),
+      };
+      localPasses.unshift(newMetadata);
+      return mockCreated;
     }
+
+    const response = await apiClient.post<CreatePassResponse>('/api/v1/passes', payload);
+    return response.data;
   },
 
-  async revokePass(passId: string): Promise<PassSummary> {
-    try {
-      const response = await apiClient.post<PassSummary>(`/api/v1/passes/${passId}/revoke`);
-      if (response && response.data) {
-        localPasses = (localPasses || []).map((p) => (p.passId === passId ? response.data : p));
-        return response.data;
-      }
-      throw new Error('No data');
-    } catch {
-      let revoked: PassSummary | undefined;
-      localPasses = (localPasses || []).map((p) => {
+  async revokePass(passId: string): Promise<PassMetadata> {
+    if (isMockEnabled()) {
+      let revoked: PassMetadata | undefined;
+      localPasses = localPasses.map((p) => {
         if (p.passId === passId) {
-          revoked = { ...p, status: 'REVOKED' };
+          revoked = { ...p, status: 'REVOKED', revokedAt: new Date().toISOString() };
           return revoked;
         }
         return p;
       });
-      return revoked ?? {
-        passId,
-        status: 'REVOKED',
-        expiresAt: new Date().toISOString(),
-        publicUrl: '',
-        categories: [],
-      };
-    }
-  },
-
-  async rotatePass(passId: string): Promise<PassSummary> {
-    try {
-      const response = await apiClient.post<PassSummary>(`/api/v1/passes/${passId}/rotate`);
-      if (response && response.data) {
-        localPasses = (localPasses || []).map((p) => (p.passId === passId ? response.data : p));
-        return response.data;
-      }
-      throw new Error('No data');
-    } catch {
-      let rotated: PassSummary | undefined;
-      localPasses = (localPasses || []).map((p) => {
-        if (p.passId === passId) {
-          rotated = {
-            ...p,
-            status: 'ACTIVE',
-            publicUrl: `https://medipass.health/p/${passId}-rotated`,
-          };
-          return rotated;
-        }
-        return p;
-      });
       return (
-        rotated ?? {
+        revoked ?? {
           passId,
-          status: 'ACTIVE',
+          status: 'REVOKED',
           expiresAt: new Date().toISOString(),
-          publicUrl: `https://medipass.health/p/${passId}-rotated`,
           categories: [],
+          createdAt: new Date().toISOString(),
+          revokedAt: new Date().toISOString(),
         }
       );
     }
+
+    const response = await apiClient.post<PassMetadata>(`/api/v1/passes/${passId}/revoke`);
+    return response.data;
   },
 
-  async getPatientAccessLogs(): Promise<PassAuditLog[]> {
-    try {
-      const response = await apiClient.get<any[]>('/api/v1/patients/me/access-logs');
-      if (response && response.data) {
-        return response.data.map((log: any) => ({
-          id: log.id,
-          passId: log.passId,
-          timestamp: log.accessedAt || log.timestamp,
-          accessStatus: log.outcome || log.accessStatus,
-        }));
-      }
-      return Object.values(MOCK_AUDIT_LOGS).flat();
-    } catch {
-      return Object.values(MOCK_AUDIT_LOGS).flat();
+  async rotatePass(passId: string): Promise<RotatePassResponse> {
+    if (isMockEnabled()) {
+      const rotatedUrl = `https://medipass.health/p/${passId}-rotated`;
+      localPasses = localPasses.map((p) => {
+        if (p.passId === passId) {
+          return {
+            ...p,
+            status: 'ACTIVE',
+          };
+        }
+        return p;
+      });
+      const current = localPasses.find((p) => p.passId === passId);
+      return {
+        passId,
+        status: 'ACTIVE',
+        expiresAt: current?.expiresAt ?? new Date().toISOString(),
+        publicUrl: rotatedUrl,
+        categories: current?.categories ?? [],
+      };
     }
+
+    const response = await apiClient.post<RotatePassResponse>(`/api/v1/passes/${passId}/rotate`);
+    return response.data;
   },
 
-  async getPassAuditLogs(passId: string): Promise<PassAuditLog[]> {
-    try {
-      const allLogs = await this.getPatientAccessLogs();
-      const filtered = allLogs.filter((l) => l.passId === passId);
-      if (filtered.length > 0) return filtered;
-      return MOCK_AUDIT_LOGS[passId] ?? [];
-    } catch {
-      return MOCK_AUDIT_LOGS[passId] ?? [];
+  async getPatientAccessLogs(): Promise<AccessLogResponse[]> {
+    if (isMockEnabled()) {
+      return Object.values(MOCK_AUDIT_LOGS).flat();
     }
+    const response = await apiClient.get<AccessLogResponse[]>('/api/v1/patients/me/access-logs');
+    return response.data;
+  },
+
+  async getPassAuditLogs(passId: string): Promise<AccessLogResponse[]> {
+    const allLogs = await this.getPatientAccessLogs();
+    return allLogs.filter((l) => l.passId === passId);
   },
 };

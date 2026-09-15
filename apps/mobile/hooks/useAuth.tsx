@@ -37,11 +37,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (credentials: LoginRequest) => {
     setIsLoading(true);
     try {
-      const auth = await authService.login(credentials);
-      setUser({
-        patientId: auth.patientId,
-        email: credentials.email,
-      });
+      const session = await authService.login(credentials);
+      setUser(session);
     } finally {
       setIsLoading(false);
     }
@@ -50,13 +47,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const register = async (payload: RegisterRequest) => {
     setIsLoading(true);
     try {
-      const auth = await authService.register(payload);
-      setUser({
-        patientId: auth.patientId,
-        email: payload.email,
-        firstName: payload.firstName,
-        lastName: payload.lastName,
-      });
+      const session = await authService.register(payload);
+      setUser(session);
     } finally {
       setIsLoading(false);
     }

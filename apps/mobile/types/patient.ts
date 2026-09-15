@@ -1,27 +1,16 @@
-export type Gender = 'MALE' | 'FEMALE' | 'OTHER' | 'UNKNOWN';
-
-export type BloodType = 'A+' | 'A-' | 'B+' | 'B-' | 'AB+' | 'AB-' | 'O+' | 'O-' | 'UNKNOWN';
-
 export interface PatientProfile {
   id: string;
-  firstName: string;
-  lastName: string;
-  dateOfBirth?: string;
-  gender?: Gender;
-  bloodType?: BloodType;
-  phone?: string;
-  address?: string;
-  completenessScore?: number;
+  fullName: string;
+  birthDate?: string | null;
+  gender?: string | null;
+  phone?: string | null;
 }
 
 export interface UpdatePatientProfileRequest {
-  firstName: string;
-  lastName: string;
-  dateOfBirth?: string;
-  gender?: Gender;
-  bloodType?: BloodType;
-  phone?: string;
-  address?: string;
+  fullName: string;
+  birthDate?: string | null;
+  gender?: string | null;
+  phone?: string | null;
 }
 
 export interface CategoryCompleteness {

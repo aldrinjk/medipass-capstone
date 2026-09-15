@@ -60,9 +60,17 @@ export default function MedicationsScreen() {
     setIsSubmitting(true);
     try {
       if (editingMed) {
-        return await updateMedication(editingMed.id, data);
+        return await updateMedication(editingMed.id, {
+          name: data.name,
+          dosage: data.dosage || undefined,
+          frequency: data.frequency || undefined,
+        });
       } else {
-        return await createMedication(data);
+        return await createMedication({
+          name: data.name,
+          dosage: data.dosage || undefined,
+          frequency: data.frequency || undefined,
+        });
       }
     } finally {
       setIsSubmitting(false);

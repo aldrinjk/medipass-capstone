@@ -60,9 +60,17 @@ export default function ConditionsScreen() {
     setIsSubmitting(true);
     try {
       if (editingCondition) {
-        return await updateCondition(editingCondition.id, data);
+        return await updateCondition(editingCondition.id, {
+          name: data.name,
+          status: data.status || undefined,
+          notes: data.notes || undefined,
+        });
       } else {
-        return await createCondition(data);
+        return await createCondition({
+          name: data.name,
+          status: data.status || undefined,
+          notes: data.notes || undefined,
+        });
       }
     } finally {
       setIsSubmitting(false);

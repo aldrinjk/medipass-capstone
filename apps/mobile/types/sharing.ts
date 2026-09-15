@@ -20,7 +20,7 @@ export interface SharingPreferences {
 export const SHARE_CATEGORY_LABELS: Record<ShareCategory, { label: string; description: string }> = {
   DEMOGRAPHICS: {
     label: 'Demographics',
-    description: 'Basic patient information such as full name, date of birth, gender, and blood type.',
+    description: 'Basic patient information including full name, birth date, gender, and phone number.',
   },
   ALLERGIES: {
     label: 'Allergies',
@@ -28,14 +28,14 @@ export const SHARE_CATEGORY_LABELS: Record<ShareCategory, { label: string; descr
   },
   MEDICATIONS: {
     label: 'Medications',
-    description: 'Current and critical medications, dosages, frequencies, and administration instructions.',
+    description: 'Current medications, dosage, and frequency.',
   },
   CONDITIONS: {
     label: 'Conditions',
-    description: 'Active medical conditions, chronic diagnoses, and onset timeline.',
+    description: 'Documented medical conditions, status, and notes.',
   },
   EMERGENCY_CONTACT: {
     label: 'Emergency Contact',
-    description: 'Primary emergency contact name, relationship, and reachable phone number.',
+    description: 'Primary emergency contact name, relationship, and phone number.',
   },
 };

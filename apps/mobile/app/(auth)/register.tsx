@@ -29,8 +29,6 @@ export default function RegisterScreen() {
   } = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
-      firstName: '',
-      lastName: '',
       email: '',
       password: '',
       confirmPassword: '',
@@ -42,8 +40,6 @@ export default function RegisterScreen() {
     setErrorMessage(null);
     try {
       await register({
-        firstName: data.firstName,
-        lastName: data.lastName,
         email: data.email,
         password: data.password,
       });
@@ -81,36 +77,6 @@ export default function RegisterScreen() {
                 onDismiss={() => setErrorMessage(null)}
               />
             ) : null}
-
-            <Controller
-              control={control}
-              name="firstName"
-              render={({ field: { onChange, onBlur, value } }) => (
-                <Input
-                  label="First Name *"
-                  placeholder="Jane"
-                  onBlur={onBlur}
-                  onChangeText={onChange}
-                  value={value}
-                  error={errors.firstName?.message}
-                />
-              )}
-            />
-
-            <Controller
-              control={control}
-              name="lastName"
-              render={({ field: { onChange, onBlur, value } }) => (
-                <Input
-                  label="Last Name *"
-                  placeholder="Doe"
-                  onBlur={onBlur}
-                  onChangeText={onChange}
-                  value={value}
-                  error={errors.lastName?.message}
-                />
-              )}
-            />
 
             <Controller
               control={control}

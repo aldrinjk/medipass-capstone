@@ -23,12 +23,12 @@ export default function ProfileIndexScreen() {
   const sections = [
     {
       id: 'demographics',
-      title: 'Demographics & Vitals',
-      subtitle: profile?.bloodType
-        ? `Blood: ${profile.bloodType} • DOB: ${profile.dateOfBirth || 'Not set'}`
-        : 'Name, DOB, gender, blood type, contact',
+      title: 'Demographics',
+      subtitle: profile?.fullName
+        ? `${profile.fullName} • Birth date: ${profile.birthDate || 'Not set'}`
+        : 'Full name, birth date, gender, and phone',
       route: '/(app)/profile/demographics',
-      count: profile?.firstName ? 'Configured' : 'Incomplete',
+      count: profile?.fullName ? 'Configured' : 'Incomplete',
     },
     {
       id: 'allergies',
@@ -40,14 +40,14 @@ export default function ProfileIndexScreen() {
     {
       id: 'medications',
       title: 'Medications',
-      subtitle: 'Active prescriptions, dosages, administration schedule',
+      subtitle: 'Current medications, dosage, and frequency',
       route: '/(app)/profile/medications',
       count: `${medications.length} active`,
     },
     {
       id: 'conditions',
       title: 'Medical Conditions',
-      subtitle: 'Chronic diagnoses, onset dates, medical warnings',
+      subtitle: 'Diagnoses, status, and clinical notes',
       route: '/(app)/profile/conditions',
       count: `${conditions.length} recorded`,
     },
@@ -64,8 +64,8 @@ export default function ProfileIndexScreen() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.pageTitle}>Clinical Emergency Record</Text>
       <Text style={styles.pageSubtitle}>
-        Manage the health data stored in your MediPass. Ensure high-priority fields like blood type,
-        allergies, and emergency contacts are kept up to date.
+        Manage the health data stored in your MediPass. Keep demographics, allergies,
+        medications, conditions, and emergency contact details up to date.
       </Text>
 
       {sections.map((sec) => (

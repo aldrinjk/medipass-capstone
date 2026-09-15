@@ -3,9 +3,12 @@ import {
   registerSchema,
   demographicsSchema,
   allergySchema,
+  medicationSchema,
+  conditionSchema,
   emergencyContactSchema,
   createPassSchema,
 } from '../../types/validation';
+import { SHARE_CATEGORY_LABELS } from '../../types/sharing';
 
 describe('Zod Validation Schemas', () => {
   describe('loginSchema', () => {
@@ -37,8 +40,6 @@ describe('Zod Validation Schemas', () => {
   describe('registerSchema', () => {
     it('rejects mismatched passwords', () => {
       const result = registerSchema.safeParse({
-        firstName: 'Jane',
-        lastName: 'Doe',
         email: 'jane@example.com',
         password: 'password1234',
         confirmPassword: 'differentpassword',
@@ -46,10 +47,8 @@ describe('Zod Validation Schemas', () => {
       expect(result.success).toBe(false);
     });
 
-    it('accepts valid registration data', () => {
+    it('accepts email and password only', () => {
       const result = registerSchema.safeParse({
-        firstName: 'Jane',
-        lastName: 'Doe',
         email: 'jane@example.com',
         password: 'password1234',
         confirmPassword: 'password1234',
@@ -59,25 +58,23 @@ describe('Zod Validation Schemas', () => {
   });
 
   describe('demographicsSchema', () => {
-    it('validates ISO date format YYYY-MM-DD', () => {
+    it('validates ISO birth date format YYYY-MM-DD', () => {
       const valid = demographicsSchema.safeParse({
-        firstName: 'Jane',
-        lastName: 'Doe',
-        dateOfBirth: '1990-05-20',
+        fullName: 'Jane Doe',
+        birthDate: '1990-05-20',
       });
       expect(valid.success).toBe(true);
 
       const invalid = demographicsSchema.safeParse({
-        firstName: 'Jane',
-        lastName: 'Doe',
-        dateOfBirth: '20-05-1990',
+        fullName: 'Jane Doe',
+        birthDate: '20-05-1990',
       });
       expect(invalid.success).toBe(false);
     });
   });
 
   describe('allergySchema', () => {
-    it('requires substance and valid severity', () => {
+    it('requires substance', () => {
       const valid = allergySchema.safeParse({
         substance: 'Penicillin',
         severity: 'SEVERE',
@@ -87,25 +84,51 @@ describe('Zod Validation Schemas', () => {
 
       const invalid = allergySchema.safeParse({
         substance: '',
-        severity: 'UNKNOWN_SEVERITY',
       });
       expect(invalid.success).toBe(false);
     });
   });
 
+  describe('medicationSchema', () => {
+    it('requires name and omits route/instructions/status', () => {
+      const valid = medicationSchema.safeParse({
+        name: 'Lisinopril',
+        dosage: '10 mg',
+        frequency: 'Once daily',
+      });
+      expect(valid.success).toBe(true);
+      if (valid.success) {
+        expect(valid.data).not.toHaveProperty('route');
+        expect(valid.data).not.toHaveProperty('instructions');
+        expect(valid.data).not.toHaveProperty('status');
+      }
+    });
+  });
+
+  describe('conditionSchema', () => {
+    it('uses name, status, and notes', () => {
+      const valid = conditionSchema.safeParse({
+        name: 'Asthma',
+        status: 'ACTIVE',
+        notes: 'Cold-air trigger',
+      });
+      expect(valid.success).toBe(true);
+    });
+  });
+
   describe('emergencyContactSchema', () => {
-    it('requires name, relationship, and phone number', () => {
+    it('requires name, relationship, and phone', () => {
       const valid = emergencyContactSchema.safeParse({
         name: 'John Doe',
         relationship: 'Spouse',
-        phoneNumber: '+1-555-123-4567',
+        phone: '+1-555-123-4567',
       });
       expect(valid.success).toBe(true);
 
       const invalid = emergencyContactSchema.safeParse({
         name: '',
         relationship: '',
-        phoneNumber: '',
+        phone: '',
       });
       expect(invalid.success).toBe(false);
     });
@@ -124,6 +147,17 @@ describe('Zod Validation Schemas', () => {
         expiresInHours: 24,
       });
       expect(invalid.success).toBe(false);
+    });
+  });
+
+  describe('sharing copy', () => {
+    it('does not advertise unsupported backend fields', () => {
+      const copy = Object.values(SHARE_CATEGORY_LABELS)
+        .map((item) => item.description.toLowerCase())
+        .join(' ');
+      expect(copy).not.toMatch(/blood type/);
+      expect(copy).not.toMatch(/administration instructions/);
+      expect(copy).not.toMatch(/onset/);
     });
   });
 });

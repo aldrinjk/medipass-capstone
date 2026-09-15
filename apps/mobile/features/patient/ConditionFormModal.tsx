@@ -11,7 +11,7 @@ import {
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { conditionSchema, ConditionFormData } from '../../types/validation';
-import { Condition, ConditionClinicalStatus } from '../../types/clinical';
+import { Condition } from '../../types/clinical';
 import { Input, Button } from '../../components';
 
 interface ConditionFormModalProps {
@@ -22,14 +22,7 @@ interface ConditionFormModalProps {
   isSubmitting?: boolean;
 }
 
-const STATUSES: ConditionClinicalStatus[] = [
-  'ACTIVE',
-  'RECURRENCE',
-  'RELAPSE',
-  'INACTIVE',
-  'REMISSION',
-  'RESOLVED',
-];
+const STATUSES = ['ACTIVE', 'INACTIVE', 'RESOLVED'];
 
 export const ConditionFormModal: React.FC<ConditionFormModalProps> = ({
   isVisible,
@@ -46,9 +39,8 @@ export const ConditionFormModal: React.FC<ConditionFormModalProps> = ({
   } = useForm<ConditionFormData>({
     resolver: zodResolver(conditionSchema),
     defaultValues: {
-      conditionName: '',
-      clinicalStatus: 'ACTIVE',
-      onsetDate: '',
+      name: '',
+      status: '',
       notes: '',
     },
   });
@@ -56,16 +48,14 @@ export const ConditionFormModal: React.FC<ConditionFormModalProps> = ({
   useEffect(() => {
     if (condition) {
       reset({
-        conditionName: condition.conditionName,
-        clinicalStatus: condition.clinicalStatus,
-        onsetDate: condition.onsetDate || '',
+        name: condition.name,
+        status: condition.status || '',
         notes: condition.notes || '',
       });
     } else {
       reset({
-        conditionName: '',
-        clinicalStatus: 'ACTIVE',
-        onsetDate: '',
+        name: '',
+        status: '',
         notes: '',
       });
     }
@@ -106,7 +96,7 @@ export const ConditionFormModal: React.FC<ConditionFormModalProps> = ({
           <ScrollView keyboardShouldPersistTaps="handled">
             <Controller
               control={control}
-              name="conditionName"
+              name="name"
               render={({ field: { onChange, onBlur, value } }) => (
                 <Input
                   label="Condition Name *"
@@ -114,49 +104,17 @@ export const ConditionFormModal: React.FC<ConditionFormModalProps> = ({
                   onBlur={onBlur}
                   onChangeText={onChange}
                   value={value}
-                  error={errors.conditionName?.message}
+                  error={errors.name?.message}
                 />
               )}
             />
 
             <Controller
               control={control}
-              name="onsetDate"
-              render={({ field: { onChange, onBlur, value } }) => (
-                <Input
-                  label="Approximate Onset Date (YYYY-MM-DD)"
-                  placeholder="2020-05-15"
-                  onBlur={onBlur}
-                  onChangeText={onChange}
-                  value={value}
-                  error={errors.onsetDate?.message}
-                />
-              )}
-            />
-
-            <Controller
-              control={control}
-              name="notes"
-              render={({ field: { onChange, onBlur, value } }) => (
-                <Input
-                  label="Clinical Notes / Triggers"
-                  placeholder="e.g. Triggered by seasonal changes"
-                  multiline
-                  numberOfLines={3}
-                  onBlur={onBlur}
-                  onChangeText={onChange}
-                  value={value}
-                  error={errors.notes?.message}
-                />
-              )}
-            />
-
-            <Controller
-              control={control}
-              name="clinicalStatus"
+              name="status"
               render={({ field: { onChange, value } }) => (
                 <View style={styles.pickerSection}>
-                  <Text style={styles.sectionLabel}>Clinical Status</Text>
+                  <Text style={styles.sectionLabel}>Status</Text>
                   <View style={styles.pillContainer}>
                     {STATUSES.map((st) => (
                       <Button
@@ -170,6 +128,23 @@ export const ConditionFormModal: React.FC<ConditionFormModalProps> = ({
                     ))}
                   </View>
                 </View>
+              )}
+            />
+
+            <Controller
+              control={control}
+              name="notes"
+              render={({ field: { onChange, onBlur, value } }) => (
+                <Input
+                  label="Notes"
+                  placeholder="e.g. Triggered by seasonal changes"
+                  multiline
+                  numberOfLines={3}
+                  onBlur={onBlur}
+                  onChangeText={onChange}
+                  value={value}
+                  error={errors.notes?.message}
+                />
               )}
             />
 

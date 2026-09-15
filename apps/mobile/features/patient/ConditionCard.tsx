@@ -14,37 +14,30 @@ export const ConditionCard: React.FC<ConditionCardProps> = ({
   onEdit,
   onDelete,
 }) => {
-  const getStatusVariant = (status: string) => {
+  const getStatusVariant = (status?: string) => {
     switch (status) {
       case 'ACTIVE':
-      case 'RECURRENCE':
-      case 'RELAPSE':
         return 'danger';
-      case 'REMISSION':
       case 'INACTIVE':
         return 'warning';
       case 'RESOLVED':
-      default:
         return 'success';
+      default:
+        return 'neutral';
     }
   };
 
   return (
     <Card>
       <View style={styles.header}>
-        <Text style={styles.name}>{condition.conditionName}</Text>
-        <Badge
-          label={condition.clinicalStatus}
-          variant={getStatusVariant(condition.clinicalStatus)}
-        />
+        <Text style={styles.name}>{condition.name}</Text>
+        {condition.status ? (
+          <Badge
+            label={condition.status}
+            variant={getStatusVariant(condition.status)}
+          />
+        ) : null}
       </View>
-
-      {condition.onsetDate ? (
-        <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>Onset Date:</Text>
-          <Text style={styles.detailValue}>{condition.onsetDate}</Text>
-        </View>
-      ) : null}
 
       {condition.notes ? (
         <View style={styles.detailRow}>

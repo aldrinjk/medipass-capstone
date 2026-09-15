@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Medication } from '../../types/clinical';
-import { Card, Badge, Button } from '../../components';
+import { Card, Button } from '../../components';
 
 interface MedicationCardProps {
   medication: Medication;
@@ -14,26 +14,10 @@ export const MedicationCard: React.FC<MedicationCardProps> = ({
   onEdit,
   onDelete,
 }) => {
-  const getStatusVariant = (status: string) => {
-    switch (status) {
-      case 'ACTIVE':
-        return 'success';
-      case 'COMPLETED':
-        return 'info';
-      case 'DISCONTINUED':
-      default:
-        return 'neutral';
-    }
-  };
-
   return (
     <Card>
       <View style={styles.header}>
         <Text style={styles.name}>{medication.name}</Text>
-        <Badge
-          label={medication.status}
-          variant={getStatusVariant(medication.status)}
-        />
       </View>
 
       {medication.dosage ? (
@@ -47,20 +31,6 @@ export const MedicationCard: React.FC<MedicationCardProps> = ({
         <View style={styles.detailRow}>
           <Text style={styles.detailLabel}>Frequency:</Text>
           <Text style={styles.detailValue}>{medication.frequency}</Text>
-        </View>
-      ) : null}
-
-      {medication.route ? (
-        <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>Route:</Text>
-          <Text style={styles.detailValue}>{medication.route}</Text>
-        </View>
-      ) : null}
-
-      {medication.instructions ? (
-        <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>Instructions:</Text>
-          <Text style={styles.detailValue}>{medication.instructions}</Text>
         </View>
       ) : null}
 

@@ -11,7 +11,7 @@ import {
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { medicationSchema, MedicationFormData } from '../../types/validation';
-import { Medication, MedicationStatus } from '../../types/clinical';
+import { Medication } from '../../types/clinical';
 import { Input, Button } from '../../components';
 
 interface MedicationFormModalProps {
@@ -21,8 +21,6 @@ interface MedicationFormModalProps {
   onSubmit: (data: MedicationFormData) => Promise<boolean>;
   isSubmitting?: boolean;
 }
-
-const STATUSES: MedicationStatus[] = ['ACTIVE', 'COMPLETED', 'DISCONTINUED'];
 
 export const MedicationFormModal: React.FC<MedicationFormModalProps> = ({
   isVisible,
@@ -42,9 +40,6 @@ export const MedicationFormModal: React.FC<MedicationFormModalProps> = ({
       name: '',
       dosage: '',
       frequency: '',
-      route: '',
-      instructions: '',
-      status: 'ACTIVE',
     },
   });
 
@@ -54,18 +49,12 @@ export const MedicationFormModal: React.FC<MedicationFormModalProps> = ({
         name: medication.name,
         dosage: medication.dosage || '',
         frequency: medication.frequency || '',
-        route: medication.route || '',
-        instructions: medication.instructions || '',
-        status: medication.status,
       });
     } else {
       reset({
         name: '',
         dosage: '',
         frequency: '',
-        route: '',
-        instructions: '',
-        status: 'ACTIVE',
       });
     }
   }, [medication, reset, isVisible]);
@@ -148,60 +137,6 @@ export const MedicationFormModal: React.FC<MedicationFormModalProps> = ({
               )}
             />
 
-            <Controller
-              control={control}
-              name="route"
-              render={({ field: { onChange, onBlur, value } }) => (
-                <Input
-                  label="Route of Administration"
-                  placeholder="e.g. Oral, Inhalation, Intramuscular"
-                  onBlur={onBlur}
-                  onChangeText={onChange}
-                  value={value}
-                  error={errors.route?.message}
-                />
-              )}
-            />
-
-            <Controller
-              control={control}
-              name="instructions"
-              render={({ field: { onChange, onBlur, value } }) => (
-                <Input
-                  label="Special Instructions"
-                  placeholder="e.g. Take with food, shake well before use"
-                  multiline
-                  numberOfLines={2}
-                  onBlur={onBlur}
-                  onChangeText={onChange}
-                  value={value}
-                  error={errors.instructions?.message}
-                />
-              )}
-            />
-
-            <Controller
-              control={control}
-              name="status"
-              render={({ field: { onChange, value } }) => (
-                <View style={styles.pickerSection}>
-                  <Text style={styles.sectionLabel}>Status</Text>
-                  <View style={styles.pillContainer}>
-                    {STATUSES.map((st) => (
-                      <Button
-                        key={st}
-                        title={st}
-                        size="sm"
-                        variant={value === st ? 'primary' : 'outline'}
-                        onPress={() => onChange(st)}
-                        style={styles.pill}
-                      />
-                    ))}
-                  </View>
-                </View>
-              )}
-            />
-
             <Button
               title={medication ? 'Update Medication' : 'Save Medication'}
               onPress={handleSubmit(handleFormSubmit)}
@@ -245,23 +180,6 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     paddingHorizontal: 0,
     paddingVertical: 0,
-  },
-  pickerSection: {
-    marginBottom: 16,
-  },
-  sectionLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#374151',
-    marginBottom: 8,
-  },
-  pillContainer: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  pill: {
-    minHeight: 36,
-    paddingHorizontal: 14,
   },
   submitBtn: {
     marginTop: 12,

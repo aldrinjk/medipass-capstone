@@ -14,7 +14,7 @@ export const AllergyCard: React.FC<AllergyCardProps> = ({
   onEdit,
   onDelete,
 }) => {
-  const getSeverityVariant = (severity: string) => {
+  const getSeverityVariant = (severity?: string) => {
     switch (severity) {
       case 'SEVERE':
         return 'danger';
@@ -30,10 +30,12 @@ export const AllergyCard: React.FC<AllergyCardProps> = ({
     <Card>
       <View style={styles.header}>
         <Text style={styles.substance}>{allergy.substance}</Text>
-        <Badge
-          label={allergy.severity}
-          variant={getSeverityVariant(allergy.severity)}
-        />
+        {allergy.severity ? (
+          <Badge
+            label={allergy.severity}
+            variant={getSeverityVariant(allergy.severity)}
+          />
+        ) : null}
       </View>
 
       {allergy.reaction ? (
@@ -42,11 +44,6 @@ export const AllergyCard: React.FC<AllergyCardProps> = ({
           <Text style={styles.detailValue}>{allergy.reaction}</Text>
         </View>
       ) : null}
-
-      <View style={styles.detailRow}>
-        <Text style={styles.detailLabel}>Status:</Text>
-        <Text style={styles.statusValue}>{allergy.status}</Text>
-      </View>
 
       <View style={styles.actions}>
         <Button
@@ -94,11 +91,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#374151',
     flex: 1,
-  },
-  statusValue: {
-    fontSize: 14,
-    color: '#1F2937',
-    fontWeight: '600',
   },
   actions: {
     flexDirection: 'row',

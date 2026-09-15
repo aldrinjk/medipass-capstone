@@ -49,7 +49,7 @@ export default function DashboardScreen() {
     allergies.length,
     medications.length,
     conditions.length,
-    Boolean(contact?.name && contact?.phoneNumber)
+    Boolean(contact?.name && contact?.phone)
   );
 
   const activePasses = passes.filter((p) => p.status === 'ACTIVE');
@@ -58,9 +58,7 @@ export default function DashboardScreen() {
     return <LoadingSpinner message="Loading dashboard..." />;
   }
 
-  const patientName = profile
-    ? `${profile.firstName} ${profile.lastName}`
-    : user?.email || 'Patient';
+  const patientName = profile?.fullName || user?.email || 'Patient';
 
   return (
     <ScrollView

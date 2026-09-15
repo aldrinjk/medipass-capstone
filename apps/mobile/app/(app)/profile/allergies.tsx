@@ -60,9 +60,17 @@ export default function AllergiesScreen() {
     setIsSubmitting(true);
     try {
       if (editingAllergy) {
-        return await updateAllergy(editingAllergy.id, data);
+        return await updateAllergy(editingAllergy.id, {
+          substance: data.substance,
+          reaction: data.reaction || undefined,
+          severity: data.severity || undefined,
+        });
       } else {
-        return await createAllergy(data);
+        return await createAllergy({
+          substance: data.substance,
+          reaction: data.reaction || undefined,
+          severity: data.severity || undefined,
+        });
       }
     } finally {
       setIsSubmitting(false);

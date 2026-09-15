@@ -13,7 +13,7 @@ export const CompletenessCard: React.FC<CompletenessCardProps> = ({
   onNavigateToCategory,
 }) => {
   const items = [
-    { key: 'demographics', label: 'Demographics & Blood Type', isComplete: completeness.demographics },
+    { key: 'demographics', label: 'Demographics', isComplete: completeness.demographics },
     { key: 'allergies', label: 'Allergies & Reactions', isComplete: completeness.allergies },
     { key: 'medications', label: 'Medications & Dosages', isComplete: completeness.medications },
     { key: 'conditions', label: 'Conditions & Diagnoses', isComplete: completeness.conditions },

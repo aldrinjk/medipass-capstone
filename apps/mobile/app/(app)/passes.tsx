@@ -17,11 +17,13 @@ export default function PassesScreen() {
   const {
     passes,
     auditLogs,
+    publicUrls,
     isLoading,
     error,
     loadPasses,
     createPass,
     revokePass,
+    rotatePass,
     loadAuditLogs,
   } = usePasses();
   const { categories } = useSharingPreferences();
@@ -48,6 +50,14 @@ export default function PassesScreen() {
     const success = await revokePass(passId);
     if (!success) {
       setActionError('Failed to revoke pass. Please try again.');
+    }
+  };
+
+  const handleRotatePass = async (passId: string) => {
+    setActionError(null);
+    const rotated = await rotatePass(passId);
+    if (!rotated) {
+      setActionError('Failed to rotate pass link. Please try again.');
     }
   };
 
@@ -123,7 +133,9 @@ export default function PassesScreen() {
           <PassSummaryCard
             key={pass.passId}
             pass={pass}
+            publicUrl={publicUrls[pass.passId]}
             onRevoke={handleRevokePass}
+            onRotate={handleRotatePass}
             onViewLogs={handleOpenLogs}
           />
         ))
@@ -139,7 +151,9 @@ export default function PassesScreen() {
             <PassSummaryCard
               key={pass.passId}
               pass={pass}
+              publicUrl={publicUrls[pass.passId]}
               onRevoke={handleRevokePass}
+              onRotate={handleRotatePass}
               onViewLogs={handleOpenLogs}
             />
           ))}
