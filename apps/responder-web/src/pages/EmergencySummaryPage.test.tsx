@@ -38,6 +38,8 @@ describe('EmergencySummaryPage', () => {
       medications: null,
       conditions: null,
       emergencyContact: null,
+      accessTraceCode: 'MP-TESTTRACE000001',
+      responderDevice: 'iPhone · Safari',
     }
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(200, summary)))
 
@@ -125,6 +127,8 @@ describe('EmergencySummaryPage', () => {
       medications: null,
       conditions: null,
       emergencyContact: null,
+      accessTraceCode: 'MP-TESTTRACE000001',
+      responderDevice: 'iPhone · Safari',
     }
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(200, summary)))
 
