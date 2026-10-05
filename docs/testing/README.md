@@ -171,6 +171,17 @@ all), the responder's IP address, user agent, or any other request metadata
 beyond the correlation id, and no clinical content (allergies, medications,
 etc. are never written to the audit log, only which pass/outcome occurred).
 
+## Audit failure policy
+
+Application access auditing is authoritative and normally persists in a separate `REQUIRES_NEW` transaction. The public-pass orchestration calls it through a fail-safe wrapper:
+
+- a successful emergency summary is not converted into a server error only because the audit store is temporarily unavailable;
+- invalid, expired, and revoked token responses keep their intended 404/410 behavior even if the audit write fails;
+- the failure is written to the application log with the outcome/pass id when known;
+- raw public tokens and clinical content are never written to that warning log.
+
+`PublicPassAuditFailureTests` verifies the success and invalid-token failure paths. This behavior keeps emergency access availability independent from temporary audit persistence outages while preserving the normal audit path whenever the application database is healthy.
+
 ### `AccessOutcome` semantics
 
 - `SUCCESS` - the token resolved to an active, non-expired pass and the
