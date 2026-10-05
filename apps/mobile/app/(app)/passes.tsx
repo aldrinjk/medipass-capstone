@@ -198,9 +198,11 @@ export default function PassesScreen() {
             key={pass.passId}
             pass={pass}
             publicUrl={publicUrls[pass.passId]}
-            onRevoke={handleRevokePass}
+            onRevoke={confirmRevokePass}
             onRotate={handleRotatePass}
             onViewLogs={handleOpenLogs}
+            isRevoking={revokingPassId === pass.passId}
+            isRotating={rotatingPassId === pass.passId}
           />
         ))
       )}
@@ -216,9 +218,11 @@ export default function PassesScreen() {
               key={pass.passId}
               pass={pass}
               publicUrl={publicUrls[pass.passId]}
-              onRevoke={handleRevokePass}
+              onRevoke={confirmRevokePass}
               onRotate={handleRotatePass}
               onViewLogs={handleOpenLogs}
+              isRevoking={revokingPassId === pass.passId}
+              isRotating={rotatingPassId === pass.passId}
             />
           ))}
         </>
@@ -229,7 +233,7 @@ export default function PassesScreen() {
         visible={!!selectedPassForLogs}
         animationType="slide"
         transparent={true}
-        onRequestClose={() => setSelectedPassForLogs(null)}
+        onRequestClose={closeAuditModal}
       >
         <View style={styles.modalBackdrop}>
           <View style={styles.modalSheet}>
@@ -239,7 +243,7 @@ export default function PassesScreen() {
                 title="✕"
                 variant="outline"
                 size="sm"
-                onPress={() => setSelectedPassForLogs(null)}
+                onPress={closeAuditModal}
                 style={styles.modalCloseBtn}
               />
             </View>
