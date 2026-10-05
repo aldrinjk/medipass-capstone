@@ -3,8 +3,8 @@ package com.medipass.patient;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.api.MethodOutcome;
 import ca.uhn.fhir.rest.client.api.IGenericClient;
-import ca.uhn.fhir.rest.gclient.TokenClientParam;
 import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
+import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
 import com.medipass.patient.dto.AllergyDto;
 import com.medipass.patient.dto.AllergyRequest;
 import com.medipass.patient.dto.ConditionDto;
@@ -108,10 +108,11 @@ public class HapiFhirClinicalService implements ClinicalService {
             Patient patient = findOrCreatePatient(userId);
             UUID appId = UUID.randomUUID();
             AllergyIntolerance resource = new AllergyIntolerance();
+            resource.setId(logicalResourceId("AllergyIntolerance", appId));
             resource.addIdentifier(appIdentifier(appId));
             resource.setPatient(patientReference(patient));
             applyAllergy(resource, request);
-            create(resource);
+            update(resource);
             return toAllergyDto(resource);
         });
     }
@@ -157,11 +158,12 @@ public class HapiFhirClinicalService implements ClinicalService {
             Patient patient = findOrCreatePatient(userId);
             UUID appId = UUID.randomUUID();
             MedicationStatement resource = new MedicationStatement();
+            resource.setId(logicalResourceId("MedicationStatement", appId));
             resource.addIdentifier(appIdentifier(appId));
             resource.setSubject(patientReference(patient));
             resource.setStatus(MedicationStatement.MedicationStatementStatus.ACTIVE);
             applyMedication(resource, request);
-            create(resource);
+            update(resource);
             return toMedicationDto(resource);
         });
     }
@@ -207,10 +209,11 @@ public class HapiFhirClinicalService implements ClinicalService {
             Patient patient = findOrCreatePatient(userId);
             UUID appId = UUID.randomUUID();
             Condition resource = new Condition();
+            resource.setId(logicalResourceId("Condition", appId));
             resource.addIdentifier(appIdentifier(appId));
             resource.setSubject(patientReference(patient));
             applyCondition(resource, request);
-            create(resource);
+            update(resource);
             return toConditionDto(resource);
         });
     }
@@ -310,22 +313,22 @@ public class HapiFhirClinicalService implements ClinicalService {
     }
 
     private Patient findOrCreatePatient(UUID userId) {
-        List<Patient> matches = searchByIdentifier(
-                Patient.class,
-                USER_IDENTIFIER_SYSTEM,
-                userId.toString()
-        );
-        if (!matches.isEmpty()) {
-            return matches.get(0);
+        String logicalId = "patient-" + userId;
+        try {
+            return client.read()
+                    .resource(Patient.class)
+                    .withId(logicalId)
+                    .execute();
+        } catch (ResourceNotFoundException notFound) {
+            Patient patient = new Patient();
+            patient.setId(logicalId);
+            patient.addIdentifier()
+                    .setSystem(USER_IDENTIFIER_SYSTEM)
+                    .setValue(userId.toString());
+            patient.addName().setText("Demo Patient");
+            update(patient);
+            return patient;
         }
-
-        Patient patient = new Patient();
-        patient.addIdentifier()
-                .setSystem(USER_IDENTIFIER_SYSTEM)
-                .setValue(userId.toString());
-        patient.addName().setText("Demo Patient");
-        create(patient);
-        return patient;
     }
 
     private void applyAllergy(AllergyIntolerance resource, AllergyRequest request) {
@@ -520,20 +523,19 @@ public class HapiFhirClinicalService implements ClinicalService {
             Class<T> type,
             Patient patient
     ) {
-        List<T> resources = searchByIdentifier(
-                type,
-                RESOURCE_IDENTIFIER_SYSTEM,
-                appId.toString()
-        );
-        if (resources.isEmpty()) {
-            throw new ClinicalResourceNotFoundException(resourceType + " not found.");
-        }
+        try {
+            T resource = client.read()
+                    .resource(type)
+                    .withId(logicalResourceId(resourceType, appId))
+                    .execute();
 
-        T resource = resources.get(0);
-        if (!patientId(patient).equals(referencedPatientId(resource))) {
+            if (!patientId(patient).equals(referencedPatientId(resource))) {
+                throw new ClinicalResourceNotFoundException(resourceType + " not found.");
+            }
+            return resource;
+        } catch (ResourceNotFoundException notFound) {
             throw new ClinicalResourceNotFoundException(resourceType + " not found.");
         }
-        return resource;
     }
 
     private String referencedPatientId(Resource resource) {
@@ -556,26 +558,6 @@ public class HapiFhirClinicalService implements ClinicalService {
             Class<T> type
     ) {
         return search(resourceType + "?patient=" + encode("Patient/" + patientId), type);
-    }
-
-    private <T extends Resource> List<T> searchByIdentifier(
-            Class<T> type,
-            String system,
-            String value
-    ) {
-        Bundle bundle = client.search()
-                .forResource(type)
-                .where(new TokenClientParam("identifier").exactly().systemAndCode(system, value))
-                .returnBundle(Bundle.class)
-                .execute();
-
-        List<T> resources = new ArrayList<>();
-        for (Bundle.BundleEntryComponent entry : bundle.getEntry()) {
-            if (type.isInstance(entry.getResource())) {
-                resources.add(type.cast(entry.getResource()));
-            }
-        }
-        return resources;
     }
 
     private <T extends Resource> List<T> search(String relativeSearchUrl, Class<T> type) {
@@ -616,6 +598,15 @@ public class HapiFhirClinicalService implements ClinicalService {
             );
         }
         return id;
+    }
+
+    private String logicalResourceId(String resourceType, UUID id) {
+        return switch (resourceType) {
+            case "AllergyIntolerance" -> "allergy-" + id;
+            case "MedicationStatement" -> "medication-" + id;
+            case "Condition" -> "condition-" + id;
+            default -> throw new IllegalArgumentException("Unsupported clinical resource type: " + resourceType);
+        };
     }
 
     private Identifier appIdentifier(UUID id) {
