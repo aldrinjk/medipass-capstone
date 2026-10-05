@@ -45,3 +45,5 @@ medipass:
     secret: ${JWT_SECRET}
     access-minutes: ${JWT_ACCESS_MINUTES:15}
     refresh-days: ${JWT_REFRESH_DAYS:7}
+  fhir:
+    base-url: ${HAPI_FHIR_BASE_URL:http://localhost:8081/fhir}
