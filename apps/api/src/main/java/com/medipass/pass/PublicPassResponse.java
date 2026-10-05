@@ -21,6 +21,8 @@ public record PublicPassResponse(
         List<AllergyDto> allergies,
         List<MedicationDto> medications,
         List<ConditionDto> conditions,
-        EmergencyContactDto emergencyContact
+        EmergencyContactDto emergencyContact,
+        String accessTraceCode,
+        String responderDevice
 ) {
 }
