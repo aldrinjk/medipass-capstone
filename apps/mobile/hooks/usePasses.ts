@@ -8,6 +8,7 @@ import {
   RotatePassResponse,
 } from '../types';
 import { getErrorMessage } from '../services/apiClient';
+import { clearCachedPublicUrl, getCachedPublicUrl, setCachedPublicUrl } from '../services/passUrlCache';
 
 export function usePasses() {
   const [passes, setPasses] = useState<PassMetadata[]>([]);
@@ -16,8 +17,9 @@ export function usePasses() {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  const rememberPublicUrl = (passId: string, publicUrl: string) => {
+  const rememberPublicUrl = async (passId: string, publicUrl: string) => {
     setPublicUrls((prev) => ({ ...prev, [passId]: publicUrl }));
+    await setCachedPublicUrl(passId, publicUrl);
   };
 
   const loadPasses = useCallback(async () => {
@@ -26,6 +28,20 @@ export function usePasses() {
     try {
       const data = await passService.getPasses();
       setPasses(data);
+
+      const restoredEntries = await Promise.all(
+        data.map(async (pass) => {
+          if (pass.status !== 'ACTIVE') {
+            await clearCachedPublicUrl(pass.passId);
+            return null;
+          }
+          const url = await getCachedPublicUrl(pass.passId);
+          return url ? ([pass.passId, url] as const) : null;
+        })
+      );
+      setPublicUrls(
+        Object.fromEntries(restoredEntries.filter((entry): entry is readonly [string, string] => entry !== null))
+      );
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {
@@ -41,7 +57,7 @@ export function usePasses() {
     setError(null);
     try {
       const newPass = await passService.createPass(categories, expiresInHours);
-      rememberPublicUrl(newPass.passId, newPass.publicUrl);
+      await rememberPublicUrl(newPass.passId, newPass.publicUrl);
       await loadPasses();
       return newPass;
     } catch (err) {
@@ -55,6 +71,12 @@ export function usePasses() {
   const revokePass = async (passId: string): Promise<boolean> => {
     try {
       await passService.revokePass(passId);
+      await clearCachedPublicUrl(passId);
+      setPublicUrls((prev) => {
+        const next = { ...prev };
+        delete next[passId];
+        return next;
+      });
       await loadPasses();
       return true;
     } catch (err) {
@@ -66,7 +88,7 @@ export function usePasses() {
   const rotatePass = async (passId: string): Promise<RotatePassResponse | null> => {
     try {
       const updated = await passService.rotatePass(passId);
-      rememberPublicUrl(updated.passId, updated.publicUrl);
+      await rememberPublicUrl(updated.passId, updated.publicUrl);
       await loadPasses();
       return updated;
     } catch (err) {
