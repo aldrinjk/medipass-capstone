@@ -35,6 +35,8 @@ public class PassAccessLogService {
                 log.getId(),
                 log.getPassId(),
                 log.getOutcome(),
+                log.getTraceCode(),
+                log.getResponderDevice(),
                 log.getAccessedAt()
         );
     }
