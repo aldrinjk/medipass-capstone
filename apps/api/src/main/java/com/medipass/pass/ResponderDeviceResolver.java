@@ -61,14 +61,14 @@ public final class ResponderDeviceResolver {
     }
 
     private static String browserLabel(String ua) {
+        if (ua.contains("EdgiOS") || ua.contains("EdgA") || ua.contains("Edg/")) {
+            return "Edge";
+        }
         if (ua.contains("CriOS") || ua.contains("Chrome/")) {
             return "Chrome";
         }
         if (ua.contains("FxiOS") || ua.contains("Firefox/")) {
             return "Firefox";
-        }
-        if (ua.contains("EdgiOS") || ua.contains("EdgA") || ua.contains("Edg/")) {
-            return "Edge";
         }
         if (ua.contains("OPR/") || ua.contains("Opera")) {
             return "Opera";
@@ -83,7 +83,7 @@ public final class ResponderDeviceResolver {
         if (value == null) {
             return "";
         }
-        return value.replace(""", "").trim();
+        return value.replace("\"", "").trim();
     }
 
     private static boolean isUsefulModel(String value) {
