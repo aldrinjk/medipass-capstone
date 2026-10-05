@@ -262,6 +262,18 @@ export default function PassesScreen() {
                     </Text>
                   </View>
                   <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Responder device</Text>
+                    <Text style={styles.detailValue}>
+                      {selectedAccessLog.responderDevice || 'Unavailable'}
+                    </Text>
+                  </View>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Trace code</Text>
+                    <Text style={styles.detailValue}>
+                      {selectedAccessLog.traceCode || 'Unavailable for older access records'}
+                    </Text>
+                  </View>
+                  <View style={styles.detailRow}>
                     <Text style={styles.detailLabel}>Pass ID</Text>
                     <Text style={styles.detailValue}>{selectedAccessLog.passId}</Text>
                   </View>
