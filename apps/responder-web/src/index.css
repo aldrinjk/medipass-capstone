@@ -352,3 +352,14 @@ body {
     font-weight: 700;
   }
 }
+
+
+.privacy-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.privacy-banner span {
+  display: block;
+}
