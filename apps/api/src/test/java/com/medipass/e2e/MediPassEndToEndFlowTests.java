@@ -28,18 +28,18 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /**
  * Drives the exact "First Development Goal" flow from the team roadmap end to
- * end through the real REST contract - no shortcuts (mock users, direct
- * repository writes) except where a downstream module isn't built yet
- * (ClinicalService is still the fake adapter; that swap is M4's job and
- * doesn't change any of the request/response shapes exercised here):
+ * end through the real REST contract. The test profile deliberately uses the
+ * isolated ClinicalService adapter so this fast E2E contract test does not
+ * require HAPI; real HAPI persistence is verified separately by
+ * HapiFhirClinicalServiceIT:
  *
  *   register -> login -> create profile -> add allergy/medication/condition
  *   -> select sharing categories -> create pass -> QR/public access
  *   -> access gets logged -> revoke -> same token no longer works
  *
- * This is the automated, backend-driven equivalent of the milestone's E2E
- * gate, standing in for a browser-driven Playwright suite until apps/mobile
- * and apps/responder-web exist (see docs/testing/README.md).
+ * This is the automated backend contract gate for the full lifecycle. The
+ * patient and responder frontends are built/tested separately in CI, while
+ * physical QR scanning remains a manual release check (see docs/testing).
  */
 @SpringBootTest
 @AutoConfigureMockMvc
