@@ -6,9 +6,9 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * Admin-facing access-log view. Includes the correlation id (absent from the
- * patient-facing AccessLogResponse) so support/ops can cross-reference an
- * access attempt with application logs. Never includes the raw public token.
+ * Admin-facing access-log view. Includes request correlation and trace metadata
+ * so support/ops can cross-reference an access attempt. Never includes the raw
+ * public token or clinical payload.
  */
 public record AdminAccessLogResponse(
         UUID id,
@@ -16,6 +16,8 @@ public record AdminAccessLogResponse(
         UUID userId,
         AccessOutcome outcome,
         String correlationId,
+        String traceCode,
+        String responderDevice,
         Instant accessedAt
 ) {
 }
