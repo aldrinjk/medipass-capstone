@@ -39,10 +39,9 @@ jobs:
         with:
           node-version: "22"
 
-      # apps/mobile and apps/responder-web are being initialized by their owners
-      # (M1, M2). Each is only built/linted/tested once it has a package.json,
-      # so this job stays green until then and picks each project up automatically
-      # the moment it lands, without needing another workflow edit.
+      # Build each frontend when its package.json is present. Both current
+      # MediPass frontends are initialized; detection keeps the workflow
+      # resilient if one app is intentionally excluded in a future branch.
       - name: Detect initialized frontend projects
         id: detect
         shell: bash
