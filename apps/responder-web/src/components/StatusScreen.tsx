@@ -9,11 +9,11 @@ interface StatusScreenProps {
 }
 
 /**
- * A single, unambiguous "no data" screen used for every case where the
- * public endpoint did not return an emergency summary: invalid token,
- * expired pass, revoked pass, or a request failure. It intentionally
- * never reveals anything about whether a pass ever existed for the
- * scanned token (see docs/team-handoffs section 6.6).
+ * A single, unambiguous "no data" screen used whenever the public endpoint
+ * does not return an emergency summary. The API contract may distinguish
+ * invalid (404), expired (410), and revoked (410) states so responders get
+ * useful next steps, but these screens never expose clinical data, internal
+ * identifiers, token hashes, or authentication details.
  */
 export function StatusScreen({ icon, title, message, tone, onRetry }: StatusScreenProps) {
   return (
