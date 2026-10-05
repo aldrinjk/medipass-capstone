@@ -53,7 +53,14 @@ class PassAccessLogEndpointTests {
 
     @Test
     void patientOnlySeesOwnAccessLogs() throws Exception {
-        passAccessLogRepository.saveAndFlush(new PassAccessLog(null, userAId, AccessOutcome.SUCCESS, "test-correlation-a1"));
+        passAccessLogRepository.saveAndFlush(new PassAccessLog(
+                null,
+                userAId,
+                AccessOutcome.SUCCESS,
+                "test-correlation-a1",
+                "MP-TRACEA100000001",
+                "iPhone · Safari"
+        ));
         passAccessLogRepository.saveAndFlush(new PassAccessLog(null, userBId, AccessOutcome.EXPIRED, "test-correlation-b1"));
 
         mockMvc.perform(get("/api/v1/patients/me/access-logs")
@@ -62,6 +69,8 @@ class PassAccessLogEndpointTests {
                 .andExpect(jsonPath("$").isArray())
                 .andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].outcome").value("SUCCESS"))
+                .andExpect(jsonPath("$[0].traceCode").value("MP-TRACEA100000001"))
+                .andExpect(jsonPath("$[0].responderDevice").value("iPhone · Safari"))
                 .andExpect(jsonPath("$[0].userId").doesNotExist());
     }
 
