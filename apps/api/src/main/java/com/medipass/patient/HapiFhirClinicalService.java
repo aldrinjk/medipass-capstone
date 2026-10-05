@@ -31,8 +31,6 @@ import org.hl7.fhir.r4.model.StringType;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
@@ -617,7 +615,10 @@ public class HapiFhirClinicalService implements ClinicalService {
     }
 
     private String encode(String value) {
-        return URLEncoder.encode(value, StandardCharsets.UTF_8);
+        // IGenericClient.search().byUrl(...) accepts the raw FHIR search
+        // expression and performs URL encoding itself. Pre-encoding token
+        // separators such as "|" causes them to be double-encoded.
+        return value;
     }
 
     private String normalize(String value) {
