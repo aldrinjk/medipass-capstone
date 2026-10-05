@@ -21,7 +21,7 @@ export function EmergencySummary({ summary }: EmergencySummaryProps) {
   const { demographics, allergies, medications, conditions, emergencyContact } = summary
   const age = demographics ? formatAge(demographics.birthDate) : null
   const [isObscured, setIsObscured] = useState(false)
-  const watermarkLabel = `MEDIPASS · CONFIDENTIAL · PASS ${summary.passId.slice(-8)}`
+  const watermarkLabel = `MEDIPASS · ${summary.accessTraceCode} · ${summary.responderDevice}`
 
   useEffect(() => {
     const updateVisibility = () => {
@@ -67,7 +67,9 @@ export function EmergencySummary({ summary }: EmergencySummaryProps) {
 
       <main className="summary" aria-label="Emergency medical summary">
         <div className="privacy-banner" role="note">
-          Confidential emergency information · Authorized clinical use only · Do not capture or share
+          <strong>Confidential emergency information</strong>
+          <span>Authorized clinical use only · Do not capture or share</span>
+          <span>Trace: {summary.accessTraceCode} · Device: {summary.responderDevice}</span>
         </div>
 
         <header className="summary-header">
