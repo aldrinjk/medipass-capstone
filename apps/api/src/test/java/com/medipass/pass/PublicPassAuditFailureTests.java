@@ -16,6 +16,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -50,7 +51,13 @@ class PublicPassAuditFailureTests {
         when(pass.getCategories()).thenReturn(Collections.emptySet());
         doThrow(new RuntimeException("audit unavailable"))
                 .when(auditService)
-                .record(passId, userId, AccessOutcome.SUCCESS);
+                .record(
+                        org.mockito.ArgumentMatchers.eq(passId),
+                        org.mockito.ArgumentMatchers.eq(userId),
+                        org.mockito.ArgumentMatchers.eq(AccessOutcome.SUCCESS),
+                        anyString(),
+                        anyString()
+                );
 
         PublicPassService service = new PublicPassService(
                 repository,
@@ -71,7 +78,13 @@ class PublicPassAuditFailureTests {
         when(repository.findByTokenHash("missing-hash")).thenReturn(Optional.empty());
         doThrow(new RuntimeException("audit unavailable"))
                 .when(auditService)
-                .record(null, null, AccessOutcome.INVALID);
+                .record(
+                        org.mockito.ArgumentMatchers.isNull(),
+                        org.mockito.ArgumentMatchers.isNull(),
+                        org.mockito.ArgumentMatchers.eq(AccessOutcome.INVALID),
+                        anyString(),
+                        anyString()
+                );
 
         PublicPassService service = new PublicPassService(
                 repository,
