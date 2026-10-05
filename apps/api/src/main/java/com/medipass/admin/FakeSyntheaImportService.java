@@ -5,12 +5,9 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
 /**
- * Temporary adapter (see SyntheaImportService). Accepts a FHIR Bundle-shaped
- * payload (or a bare array/single resource) and reports how many resources
- * it saw, without writing anything to a clinical store - there isn't one
- * wired up yet. Never inspects clinical field values, only structure, so it
- * stays agnostic to whatever resource shapes M4's real FHIR mapping ends up
- * using.
+ * Test-profile Synthea adapter. Unit/controller tests use this lightweight
+ * implementation so they do not need an external HAPI server. Production and
+ * integration environments use HapiSyntheaImportService.
  */
 @Service
 @Profile("test")
@@ -23,8 +20,8 @@ public class FakeSyntheaImportService implements SyntheaImportService {
         return new SyntheaImportResponse(
                 resourceCount,
                 "ACCEPTED_NOT_PERSISTED",
-                "Received " + resourceCount + " synthetic resource(s). No HAPI FHIR-backed clinical "
-                        + "store is wired up yet (pending the FHIR module) - nothing was persisted."
+                "Received " + resourceCount + " synthetic resource(s) in the isolated test profile; "
+                        + "nothing was persisted to an external HAPI server."
         );
     }
 
