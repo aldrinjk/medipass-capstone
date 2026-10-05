@@ -92,7 +92,7 @@ paths:
     get:
       tags: [Public]
       responses:
-        "200": {description: Filtered emergency summary}
+        "200": {description: Filtered emergency summary with server-generated access trace code and browser-visible responder device label}
         "404": {description: Invalid pass}
         "410": {description: Revoked or expired pass}
   /api/v1/patients/me/access-logs:
@@ -206,6 +206,8 @@ components:
         userId: {type: string, format: uuid, nullable: true}
         outcome: {$ref: '#/components/schemas/AccessOutcome'}
         correlationId: {type: string, nullable: true}
+        traceCode: {type: string, nullable: true}
+        responderDevice: {type: string, nullable: true}
         accessedAt: {type: string, format: date-time}
     SyntheaImportResponse:
       type: object
