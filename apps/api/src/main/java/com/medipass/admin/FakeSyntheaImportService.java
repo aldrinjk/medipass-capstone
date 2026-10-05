@@ -1,6 +1,7 @@
 package com.medipass.admin;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
 /**
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Service;
  * using.
  */
 @Service
+@Profile("test")
 public class FakeSyntheaImportService implements SyntheaImportService {
 
     @Override
