@@ -47,6 +47,12 @@ export const AccessHistoryList: React.FC<AccessHistoryListProps> = ({
             </Text>
             <Badge label={log.outcome} variant={getStatusVariant(log.outcome)} />
           </View>
+          <Text style={styles.deviceText}>
+            {log.responderDevice || 'Responder device unavailable'}
+          </Text>
+          {log.traceCode ? (
+            <Text style={styles.traceText}>Trace {log.traceCode}</Text>
+          ) : null}
           <Text style={styles.logId}>Record {log.id}</Text>
           {onViewDetails ? (
             <Button
@@ -83,6 +89,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#374151',
+  },
+  deviceText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 2,
+  },
+  traceText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#1E40AF',
+    marginBottom: 4,
   },
   logId: {
     fontSize: 11,
