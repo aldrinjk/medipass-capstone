@@ -116,4 +116,20 @@ export const passService = {
     const allLogs = await this.getPatientAccessLogs();
     return allLogs.filter((l) => l.passId === passId);
   },
+
+  async getAccessLog(logId: string): Promise<AccessLogResponse> {
+    if (isMockEnabled()) {
+      const match = Object.values(MOCK_AUDIT_LOGS)
+        .flat()
+        .find((log) => log.id === logId);
+      if (!match) {
+        throw new Error('Access log not found.');
+      }
+      return match;
+    }
+    const response = await apiClient.get<AccessLogResponse>(
+      `/api/v1/patients/me/access-logs/${encodeURIComponent(logId)}`
+    );
+    return response.data;
+  },
 };
