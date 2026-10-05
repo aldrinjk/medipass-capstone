@@ -100,6 +100,30 @@ describe('pass and sharing contracts', () => {
     expect(logs[0]).not.toHaveProperty('userAgent');
   });
 
+
+  it('loads a single access-log detail by id', async () => {
+    mockedClient.get.mockResolvedValueOnce({
+      data: {
+        id: 'log-detail-1',
+        passId: 'pass-9',
+        outcome: 'SUCCESS',
+        accessedAt: '2026-10-05T09:00:00Z',
+      },
+    } as never);
+
+    const detail = await passService.getAccessLog('log-detail-1');
+
+    expect(mockedClient.get).toHaveBeenCalledWith(
+      '/api/v1/patients/me/access-logs/log-detail-1'
+    );
+    expect(detail).toEqual({
+      id: 'log-detail-1',
+      passId: 'pass-9',
+      outcome: 'SUCCESS',
+      accessedAt: '2026-10-05T09:00:00Z',
+    });
+  });
+
   it('does not fall back to mock sharing preferences when the API fails', async () => {
     mockedClient.get.mockRejectedValueOnce(new Error('network failure'));
     await expect(sharingService.getSharingPreferences()).rejects.toThrow('network failure');
