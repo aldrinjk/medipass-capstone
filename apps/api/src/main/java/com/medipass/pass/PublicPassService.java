@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
 
@@ -23,6 +24,7 @@ import java.util.UUID;
 public class PublicPassService {
 
     private static final Logger log = LoggerFactory.getLogger(PublicPassService.class);
+    private static final String UNKNOWN_DEVICE = "Unknown device · Browser";
 
     private final EmergencyPassRepository repository;
     private final PassTokenService passTokenService;
@@ -43,7 +45,14 @@ public class PublicPassService {
 
     @Transactional(readOnly = true)
     public PublicPassResponse getPublicSummary(String rawToken) {
-        EmergencyPass emergencyPass = resolveActivePass(rawToken);
+        return getPublicSummary(rawToken, UNKNOWN_DEVICE);
+    }
+
+    @Transactional(readOnly = true)
+    public PublicPassResponse getPublicSummary(String rawToken, String responderDevice) {
+        String traceCode = newTraceCode();
+        String normalizedDevice = normalizeDevice(responderDevice);
+        EmergencyPass emergencyPass = resolveActivePass(rawToken, traceCode, normalizedDevice);
         Set<ShareCategory> categories = emergencyPass.getCategories();
 
         PublicDemographicsResponse demographics = null;
@@ -68,7 +77,15 @@ public class PublicPassService {
                 ? clinicalService.getEmergencyContact(emergencyPass.getUserId())
                 : null;
 
-        PublicPassResponse response = new PublicPassResponse(
+        recordAuditSafely(
+                emergencyPass.getId(),
+                emergencyPass.getUserId(),
+                AccessOutcome.SUCCESS,
+                traceCode,
+                normalizedDevice
+        );
+
+        return new PublicPassResponse(
                 emergencyPass.getId(),
                 emergencyPass.getExpiresAt(),
                 categories,
@@ -76,22 +93,30 @@ public class PublicPassService {
                 allergies,
                 medications,
                 conditions,
-                emergencyContact
+                emergencyContact,
+                traceCode,
+                normalizedDevice
         );
-
-        recordAuditSafely(
-                emergencyPass.getId(),
-                emergencyPass.getUserId(),
-                AccessOutcome.SUCCESS
-        );
-
-        return response;
     }
 
     @Transactional(readOnly = true)
     public EmergencyPass resolveActivePass(String rawToken) {
+        return resolveActivePass(rawToken, newTraceCode(), UNKNOWN_DEVICE);
+    }
+
+    private EmergencyPass resolveActivePass(
+            String rawToken,
+            String traceCode,
+            String responderDevice
+    ) {
         if (rawToken == null || rawToken.isBlank()) {
-            recordAuditSafely(null, null, AccessOutcome.INVALID);
+            recordAuditSafely(
+                    null,
+                    null,
+                    AccessOutcome.INVALID,
+                    traceCode,
+                    responderDevice
+            );
             throw new PublicPassNotFoundException();
         }
 
@@ -100,7 +125,13 @@ public class PublicPassService {
                 .orElse(null);
 
         if (emergencyPass == null) {
-            recordAuditSafely(null, null, AccessOutcome.INVALID);
+            recordAuditSafely(
+                    null,
+                    null,
+                    AccessOutcome.INVALID,
+                    traceCode,
+                    responderDevice
+            );
             throw new PublicPassNotFoundException();
         }
 
@@ -108,7 +139,9 @@ public class PublicPassService {
             recordAuditSafely(
                     emergencyPass.getId(),
                     emergencyPass.getUserId(),
-                    AccessOutcome.REVOKED
+                    AccessOutcome.REVOKED,
+                    traceCode,
+                    responderDevice
             );
             throw new PublicPassGoneException(PassStatus.REVOKED);
         }
@@ -118,7 +151,9 @@ public class PublicPassService {
             recordAuditSafely(
                     emergencyPass.getId(),
                     emergencyPass.getUserId(),
-                    AccessOutcome.EXPIRED
+                    AccessOutcome.EXPIRED,
+                    traceCode,
+                    responderDevice
             );
             throw new PublicPassGoneException(PassStatus.EXPIRED);
         }
@@ -126,17 +161,41 @@ public class PublicPassService {
         return emergencyPass;
     }
 
-    private void recordAuditSafely(UUID passId, UUID userId, AccessOutcome outcome) {
+    private String newTraceCode() {
+        String value = UUID.randomUUID()
+                .toString()
+                .replace("-", "")
+                .substring(0, 16)
+                .toUpperCase(Locale.ROOT);
+        return "MP-" + value;
+    }
+
+    private String normalizeDevice(String responderDevice) {
+        if (responderDevice == null || responderDevice.isBlank()) {
+            return UNKNOWN_DEVICE;
+        }
+        String trimmed = responderDevice.trim();
+        return trimmed.length() <= 120 ? trimmed : trimmed.substring(0, 120);
+    }
+
+    private void recordAuditSafely(
+            UUID passId,
+            UUID userId,
+            AccessOutcome outcome,
+            String traceCode,
+            String responderDevice
+    ) {
         try {
-            auditService.record(passId, userId, outcome);
+            auditService.record(passId, userId, outcome, traceCode, responderDevice);
         } catch (RuntimeException ex) {
             // Emergency/public-pass behavior must remain deterministic even if
             // the audit store is temporarily unavailable. Never log raw tokens
             // or clinical data here.
             log.warn(
-                    "Unable to persist public-pass audit outcome={} passId={}",
+                    "Unable to persist public-pass audit outcome={} passId={} traceCode={}",
                     outcome,
                     passId,
+                    traceCode,
                     ex
             );
         }
