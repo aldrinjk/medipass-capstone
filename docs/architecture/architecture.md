@@ -61,3 +61,25 @@ Expo Go may be used for quick early demonstrations. The real project must stay c
 ## Data policy
 
 Only Synthea or clearly fictional synthetic/demo patient data may be used. No real patient information is permitted.
+
+
+## Implemented clinical adapter
+
+The production Spring profile uses `HapiFhirClinicalService`. The `test`
+profile keeps `FakeClinicalService` so unit/controller tests do not require an
+external server; real HAPI behavior is covered separately by
+`HapiFhirClinicalServiceIT` using Testcontainers.
+
+MediPass uses deterministic FHIR logical IDs for app-owned clinical resources
+and also writes MediPass identifiers into the FHIR resources. Clinical mapping:
+
+- patient profile -> `Patient`
+- emergency contact -> `Patient.contact`
+- allergies -> `AllergyIntolerance`
+- medications -> `MedicationStatement`
+- conditions -> `Condition`
+- `GET /api/v1/patients/me/fhir-bundle` -> patient-scoped FHIR R4 collection Bundle
+
+The public responder never receives raw FHIR resources. Spring Boot validates
+the emergency pass and ShareCategories first, then exposes only the stable
+MediPass public DTO fields permitted by that pass.
