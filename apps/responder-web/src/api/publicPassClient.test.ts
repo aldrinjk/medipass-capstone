@@ -34,7 +34,7 @@ describe('fetchPublicPass', () => {
     expect(result).toEqual({ kind: 'success', data: summary })
   })
 
-  it('requests the exact public endpoint path with no auth header and no credentials', async () => {
+  it('requests the exact public endpoint with no auth, credentials, or browser cache', async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       jsonResponse(200, {
         passId: '1',
@@ -47,8 +47,6 @@ describe('fetchPublicPass', () => {
         emergencyContact: null,
         accessTraceCode: 'MP-TESTTRACE000001',
         responderDevice: 'iPhone · Safari',
-      accessTraceCode: 'MP-TESTTRACE000001',
-      responderDevice: 'iPhone · Safari',
       }),
     )
     vi.stubGlobal('fetch', fetchMock)
@@ -59,6 +57,7 @@ describe('fetchPublicPass', () => {
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
     expect(url).toBe('http://localhost:8080/api/v1/public/passes/abc123')
     expect(init.credentials).toBe('omit')
+    expect(init.cache).toBe('no-store')
     expect((init.headers as Record<string, string>).Authorization).toBeUndefined()
   })
 
