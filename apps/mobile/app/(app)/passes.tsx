@@ -6,12 +6,14 @@ import {
   ScrollView,
   RefreshControl,
   Modal,
+  Alert,
 } from 'react-native';
 import { usePasses } from '../../hooks/usePasses';
 import { useSharingPreferences } from '../../hooks/useSharingPreferences';
 import { PassSummaryCard } from '../../features/sharing/PassSummaryCard';
 import { AccessHistoryList } from '../../features/sharing/AccessHistoryList';
 import { Button, Card, LoadingSpinner, ErrorBanner, EmptyState } from '../../components';
+import { AccessLogResponse } from '../../types/pass';
 
 export default function PassesScreen() {
   const {
@@ -25,11 +27,16 @@ export default function PassesScreen() {
     revokePass,
     rotatePass,
     loadAuditLogs,
+    loadAccessLogDetail,
   } = usePasses();
   const { categories } = useSharingPreferences();
 
   const [selectedPassForLogs, setSelectedPassForLogs] = useState<string | null>(null);
   const [isCreatingPass, setIsCreatingPass] = useState(false);
+  const [revokingPassId, setRevokingPassId] = useState<string | null>(null);
+  const [rotatingPassId, setRotatingPassId] = useState<string | null>(null);
+  const [selectedAccessLog, setSelectedAccessLog] = useState<AccessLogResponse | null>(null);
+  const [loadingAccessLogId, setLoadingAccessLogId] = useState<string | null>(null);
   const [expiryHours, setExpiryHours] = useState<number>(24);
   const [actionError, setActionError] = useState<string | null>(null);
 
