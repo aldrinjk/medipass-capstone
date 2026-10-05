@@ -7,7 +7,7 @@ import {
   RefreshControl,
   TouchableOpacity,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { useAuth } from '../../hooks/useAuth';
 import { usePatientProfile } from '../../hooks/usePatientProfile';
 import { useAllergies } from '../../hooks/useAllergies';
@@ -31,8 +31,7 @@ export default function DashboardScreen() {
 
   const [refreshing, setRefreshing] = React.useState(false);
 
-  const onRefresh = async () => {
-    setRefreshing(true);
+  const refreshDashboardData = React.useCallback(async () => {
     await Promise.all([
       loadProfile(),
       loadAllergies(),
@@ -41,6 +40,24 @@ export default function DashboardScreen() {
       loadEmergencyContact(),
       loadPasses(),
     ]);
+  }, [
+    loadProfile,
+    loadAllergies,
+    loadMedications,
+    loadConditions,
+    loadEmergencyContact,
+    loadPasses,
+  ]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      void refreshDashboardData();
+    }, [refreshDashboardData])
+  );
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await refreshDashboardData();
     setRefreshing(false);
   };
 
@@ -54,7 +71,7 @@ export default function DashboardScreen() {
 
   const activePasses = passes.filter((p) => p.status === 'ACTIVE');
 
-  if (isProfileLoading && !refreshing) {
+  if (isProfileLoading && !profile && !refreshing) {
     return <LoadingSpinner message="Loading dashboard..." />;
   }
 
