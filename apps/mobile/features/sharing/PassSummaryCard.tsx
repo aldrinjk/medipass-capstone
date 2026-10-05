@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { PassMetadata } from '../../types/pass';
 import { Card, Badge, Button } from '../../components';
+import { PassQrCode } from '../../components/qr/PassQrCode';
 
 interface PassSummaryCardProps {
   pass: PassMetadata;
@@ -59,17 +60,26 @@ export const PassSummaryCard: React.FC<PassSummaryCardProps> = ({
         </Text>
       </View>
 
-      {publicUrl ? (
-        <View style={styles.detailRow}>
-          <Text style={styles.label}>Public URL:</Text>
+      {publicUrl && isActive ? (
+        <View style={styles.qrSection}>
+          <Text style={styles.qrTitle}>Emergency QR</Text>
+          <PassQrCode publicUrl={publicUrl} size={190} />
+          <Text style={styles.qrHint}>
+            A responder can scan this with a normal phone camera. The QR contains only the
+            public pass URL, never medical information.
+          </Text>
           <Text style={styles.urlText} numberOfLines={2} ellipsizeMode="middle">
             {publicUrl}
           </Text>
         </View>
+      ) : isActive ? (
+        <Text style={styles.hint}>
+          This device no longer has the raw public link for this pass. Rotate the link to
+          generate a new URL and QR code.
+        </Text>
       ) : (
         <Text style={styles.hint}>
-          The public URL is only returned when you create or rotate a pass. Rotate the
-          link to generate a new URL.
+          This pass is {pass.status.toLowerCase()} and its previous QR code no longer grants access.
         </Text>
       )}
 
@@ -145,10 +155,31 @@ const styles = StyleSheet.create({
     flex: 1,
     fontWeight: '500',
   },
+  qrSection: {
+    alignItems: 'center',
+    marginTop: 12,
+    paddingVertical: 12,
+    gap: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+  },
+  qrTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  qrHint: {
+    fontSize: 12,
+    color: '#6B7280',
+    textAlign: 'center',
+    lineHeight: 17,
+    paddingHorizontal: 8,
+  },
   urlText: {
     fontSize: 12,
     color: '#2563EB',
-    flex: 1,
+    textAlign: 'center',
+    maxWidth: '100%',
   },
   hint: {
     fontSize: 12,
