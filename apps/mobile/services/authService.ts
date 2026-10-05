@@ -7,6 +7,7 @@ import {
   getUserEmail,
 } from './secureStore';
 import { persistRotatedTokens } from './apiClient';
+import { clearAllCachedPublicUrls } from './passUrlCache';
 import {
   AuthTokensResponse,
   LoginRequest,
@@ -80,6 +81,7 @@ export const authService = {
     } catch {
       // proceed with local cleanup regardless
     } finally {
+      await clearAllCachedPublicUrls();
       await clearAuthSession();
     }
   },
@@ -107,6 +109,7 @@ export const authService = {
         role: meResponse.data.role,
       };
     } catch {
+      await clearAllCachedPublicUrls();
       await clearAuthSession();
       return null;
     }
