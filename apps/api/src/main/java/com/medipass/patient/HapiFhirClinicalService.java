@@ -21,6 +21,7 @@ import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Condition;
 import org.hl7.fhir.r4.model.ContactPoint;
+import org.hl7.fhir.r4.model.DateType;
 import org.hl7.fhir.r4.model.Extension;
 import org.hl7.fhir.r4.model.HumanName;
 import org.hl7.fhir.r4.model.Identifier;
@@ -32,9 +33,7 @@ import org.hl7.fhir.r4.model.StringType;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
-import java.util.Date;
 import java.time.LocalDate;
-import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -71,9 +70,11 @@ public class HapiFhirClinicalService implements ClinicalService {
             Patient patient = findOrCreatePatient(userId);
             patient.getName().clear();
             patient.addName(new HumanName().setText(request.fullName().trim()));
-            patient.setBirthDate(request.birthDate() == null
-                    ? null
-                    : Date.from(request.birthDate().atStartOfDay(ZoneOffset.UTC).toInstant()));
+            if (request.birthDate() == null) {
+                patient.setBirthDateElement(null);
+            } else {
+                patient.setBirthDateElement(new DateType(request.birthDate().toString()));
+            }
             writeGender(patient, request.gender());
 
             patient.getTelecom().removeIf(t -> t.getSystem() == ContactPoint.ContactPointSystem.PHONE);
@@ -392,10 +393,11 @@ public class HapiFhirClinicalService implements ClinicalService {
         }
 
         LocalDate birthDate = null;
-        if (patient.getBirthDate() != null) {
-            birthDate = patient.getBirthDate().toInstant()
-                    .atZone(ZoneOffset.UTC)
-                    .toLocalDate();
+        if (patient.hasBirthDateElement() && patient.getBirthDateElement().hasValue()) {
+            String fhirBirthDate = patient.getBirthDateElement().getValueAsString();
+            if (fhirBirthDate != null && fhirBirthDate.length() >= 10) {
+                birthDate = LocalDate.parse(fhirBirthDate.substring(0, 10));
+            }
         }
 
         String phone = patient.getTelecom().stream()
