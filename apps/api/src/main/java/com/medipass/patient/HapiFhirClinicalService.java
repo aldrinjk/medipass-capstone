@@ -33,7 +33,7 @@ import org.springframework.stereotype.Service;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.sql.Date;
+import java.util.Date;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
@@ -72,7 +72,9 @@ public class HapiFhirClinicalService implements ClinicalService {
             Patient patient = findOrCreatePatient(userId);
             patient.getName().clear();
             patient.addName(new HumanName().setText(request.fullName().trim()));
-            patient.setBirthDate(request.birthDate() == null ? null : Date.valueOf(request.birthDate()));
+            patient.setBirthDate(request.birthDate() == null
+                    ? null
+                    : Date.from(request.birthDate().atStartOfDay(ZoneOffset.UTC).toInstant()));
             writeGender(patient, request.gender());
 
             patient.getTelecom().removeIf(t -> t.getSystem() == ContactPoint.ContactPointSystem.PHONE);
