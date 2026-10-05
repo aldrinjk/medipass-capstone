@@ -102,11 +102,15 @@ Perform the following in order:
 11. Confirm only categories selected in the pass are visible.
 12. Return to the patient app and confirm the successful access appears in the
     access audit history.
-13. Revoke the pass.
-14. Scan/reload the same QR again.
-15. Confirm the responder receives the revoked/410 experience and no clinical
+13. Confirm that the access entry shows a server-generated trace code and a
+    browser-visible responder device label. The same values must appear in the
+    responder watermark/banner so a captured image can be correlated back to
+    the access record.
+14. Revoke the pass.
+15. Scan/reload the same QR again.
+16. Confirm the responder receives the revoked/410 experience and no clinical
     summary is shown.
-16. Optionally rotate a fresh active pass and confirm the previous token no
+17. Optionally rotate a fresh active pass and confirm the previous token no
     longer works.
 
 ## 6. FHIR verification
@@ -155,6 +159,10 @@ At minimum verify:
 - rotated token
 - temporary network failure/retry
 - no hidden ShareCategory appears in the responder output
+- responder watermark contains the same trace code/device label as the patient audit log
+- browser screenshot limitation is documented: capture cannot be detected or
+  universally blocked, but captured responder views are watermarked for
+  correlation to an access record
 
 ## 9. Demo-day fallback
 
