@@ -18,8 +18,30 @@ public class PassAccessAuditService {
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void record(UUID passId, UUID userId, AccessOutcome outcome) {
+    public void record(
+            UUID passId,
+            UUID userId,
+            AccessOutcome outcome,
+            String traceCode,
+            String responderDevice
+    ) {
         String correlationId = MDC.get(CorrelationIdFilter.MDC_KEY);
-        repository.save(new PassAccessLog(passId, userId, outcome, correlationId));
+        repository.save(new PassAccessLog(
+                passId,
+                userId,
+                outcome,
+                correlationId,
+                traceCode,
+                responderDevice
+        ));
+    }
+
+    /**
+     * Backwards-compatible helper for non-responder callers/tests that do not
+     * supply trace metadata.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void record(UUID passId, UUID userId, AccessOutcome outcome) {
+        record(passId, userId, outcome, null, null);
     }
 }
