@@ -1,5 +1,66 @@
-# Integration owner (P5) completes this file.
-# Hosted Supabase PostgreSQL is external and is NOT an app-postgres service here.
-# Local compose should focus on HAPI FHIR and supporting local services needed by the API.
-# An optional local PostgreSQL profile may be added for offline development only.
-services: {}
+# Local development support services for MediPass.
+#
+# Hosted Supabase PostgreSQL is external and is NOT represented here as an
+# app-postgres service. This file focuses on HAPI FHIR and the optional local
+# Postgres profile for offline development, as scoped by the project docs.
+#
+# Services:
+#   hapi-fhir   Local HAPI FHIR R4 JPA server (Milestone 1 gate: starts and
+#               accepts a synthetic Patient resource). Always started.
+#   postgres    Optional local Postgres, only for offline development when
+#               Supabase is unreachable. Never used by CI. Started only with
+#               the "local-db" profile.
+#
+# Usage:
+#   docker compose -f infra/docker-compose.yml up -d hapi-fhir
+#   docker compose -f infra/docker-compose.yml --profile local-db up -d
+#
+# HAPI FHIR is reachable at http://localhost:8081/fhir, matching
+# HAPI_FHIR_BASE_URL in .env.example. Verify with:
+#   curl http://localhost:8081/fhir/metadata
+#
+# Config overrides (P4-owned): infra/hapi-fhir/application.yaml is mounted
+# onto the image's extra classpath directory (/app/extra-classes/), which is
+# how the hapiproject/hapi image picks up custom application.yaml settings
+# (confirmed against image hapiproject/hapi:v7.4.0). Edit that file, not this
+# one, to change FHIR server behavior (persistence, validation, etc). Note the
+# image ships with no shell/exec tools, so it cannot run a container-level
+# HEALTHCHECK; poll /fhir/metadata from the host or CI runner instead.
+#
+# The image defaults to an in-memory H2 database that resets on every
+# container restart. That's sufficient for the Milestone 1 gate and day-to-day
+# dev/demo use. To persist data across restarts, have P4 point the datasource
+# in application.yaml at a file-based H2 path (or an external Postgres) and
+# add a matching named volume here.
+
+services:
+  hapi-fhir:
+    image: hapiproject/hapi:v7.4.0
+    container_name: medipass-hapi-fhir
+    restart: unless-stopped
+    ports:
+      - "8081:8080"
+    volumes:
+      - ./hapi-fhir/application.yaml:/app/extra-classes/application.yaml:ro
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: medipass-local-postgres
+    profiles: ["local-db"]
+    restart: unless-stopped
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_DB: medipass
+      POSTGRES_USER: medipass
+      POSTGRES_PASSWORD: medipass_local_dev
+    volumes:
+      - local-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U medipass -d medipass"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  local-postgres-data:

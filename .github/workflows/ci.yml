@@ -1,10 +1,71 @@
 name: CI
+
 on:
   pull_request:
     branches: [develop, main]
+  push:
+    branches: [develop, main]
+
 jobs:
-  placeholder:
+  backend:
+    name: Backend (apps/api)
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/api
     steps:
       - uses: actions/checkout@v4
-      - run: echo "P5 replaces placeholder with frontend/backend build and tests"
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Build and test (mvn verify)
+        run: mvn -B verify
+
+  frontend:
+    name: Frontend (apps/mobile, apps/responder-web)
+    runs-on: ubuntu-latest
+    env:
+      CI: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      # apps/mobile and apps/responder-web are being initialized by their owners
+      # (M1, M2). Each is only built/linted/tested once it has a package.json,
+      # so this job stays green until then and picks each project up automatically
+      # the moment it lands, without needing another workflow edit.
+      - name: Detect initialized frontend projects
+        id: detect
+        shell: bash
+        run: |
+          test -f apps/mobile/package.json && echo "mobile=true" >> "$GITHUB_OUTPUT" || echo "mobile=false" >> "$GITHUB_OUTPUT"
+          test -f apps/responder-web/package.json && echo "responder=true" >> "$GITHUB_OUTPUT" || echo "responder=false" >> "$GITHUB_OUTPUT"
+
+      - name: apps/mobile - install, lint, test
+        if: steps.detect.outputs.mobile == 'true'
+        working-directory: apps/mobile
+        run: |
+          npm ci
+          npm run lint --if-present
+          npm test --if-present
+
+      - name: apps/responder-web - install, lint, test
+        if: steps.detect.outputs.responder == 'true'
+        working-directory: apps/responder-web
+        run: |
+          npm ci
+          npm run lint --if-present
+          npm test --if-present
+
+      - name: No frontend projects initialized yet
+        if: steps.detect.outputs.mobile == 'false' && steps.detect.outputs.responder == 'false'
+        run: echo "Skipping frontend build - apps/mobile and apps/responder-web have no package.json yet."

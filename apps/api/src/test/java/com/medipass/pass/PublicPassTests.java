@@ -29,6 +29,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -173,6 +174,41 @@ class PublicPassTests {
         assertEquals(saved.getId(), log.getPassId());
         assertEquals(userId, log.getUserId());
         assertNotNull(log.getAccessedAt());
+    }
+
+    @Test
+    void publicAccessEchoesSuppliedCorrelationIdIntoAuditLog() throws Exception {
+        String rawToken = "audit-correlation-supplied-token";
+        savePass(
+                rawToken,
+                Instant.now().plus(2, ChronoUnit.DAYS),
+                Set.of(ShareCategory.ALLERGIES)
+        );
+
+        mockMvc.perform(get("/api/v1/public/passes/{token}", rawToken)
+                        .header("X-Correlation-Id", "responder-web-req-42"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("X-Correlation-Id", "responder-web-req-42"));
+
+        PassAccessLog log = onlyAuditLog();
+        assertEquals("responder-web-req-42", log.getCorrelationId());
+    }
+
+    @Test
+    void publicAccessGeneratesCorrelationIdWhenCallerSuppliesNone() throws Exception {
+        String rawToken = "audit-correlation-generated-token";
+        savePass(
+                rawToken,
+                Instant.now().plus(2, ChronoUnit.DAYS),
+                Set.of(ShareCategory.ALLERGIES)
+        );
+
+        mockMvc.perform(get("/api/v1/public/passes/{token}", rawToken))
+                .andExpect(status().isOk())
+                .andExpect(header().exists("X-Correlation-Id"));
+
+        PassAccessLog log = onlyAuditLog();
+        assertNotNull(log.getCorrelationId());
     }
 
     @Test
