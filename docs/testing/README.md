@@ -13,7 +13,7 @@ of these flows, including ad-hoc manual testing.
 | Layer | Where | Command | Needs Docker? |
 |---|---|---|---|
 | Unit / component | `apps/api/src/test/java` (`*Tests.java`) | `mvn test` | No (uses H2) |
-| Integration | `apps/api/src/test/java/com/medipass/PostgresFlywayIT.java` (`*IT.java`) | `mvn verify` | Yes (Testcontainers) |
+| Integration | `PostgresFlywayIT` + `HapiFhirClinicalServiceIT` (`*IT.java`) | `mvn verify` | Yes (Testcontainers) |
 | End-to-end flow | `apps/api/src/test/java/com/medipass/e2e/MediPassEndToEndFlowTests.java` | `mvn test` (runs with the unit suite) | No |
 | Performance | `infra/k6/public-pass-load-test.js` | see [Performance testing](#performance-testing) | Yes (or a native k6 install) |
 
@@ -41,11 +41,15 @@ Testcontainers and:
 - Round-trips a `User`, `EmergencyPass`, and `PassAccessLog` through JPA to
   confirm the repository layer works against the real engine.
 
-These are bound to the Maven `verify` phase via the failsafe plugin (not
+The second integration test, `HapiFhirClinicalServiceIT`, starts the real
+`hapiproject/hapi:v7.4.0` image and verifies MediPass against an actual HAPI
+FHIR R4 server. It covers Patient profile persistence, AllergyIntolerance,
+MedicationStatement, Condition, Patient.contact, update/delete behavior,
+emergency Bundle generation, and synthetic FHIR import.
+
+These tests are bound to the Maven `verify` phase via the failsafe plugin (not
 `test`), so the fast unit suite stays fast and CI's `mvn -B verify` step picks
-them up automatically. Requires a local Docker daemon; the `postgres:16-alpine`
-image is the same one used by `infra/docker-compose.yml`'s `local-db` profile,
-so pull it once with either.
+them up automatically. A local Docker daemon is required.
 
 ### End-to-end flow test
 
@@ -58,11 +62,11 @@ register -> login -> create profile -> add allergy/medication/condition
 -> access gets logged -> revoke -> same token blocked (410)
 ```
 
-This is the automated, backend-driven stand-in for a browser-driven
-Playwright suite until `apps/mobile` and `apps/responder-web` exist. Once
-those land, a true cross-app E2E suite (real QR scan, real browser render)
-should be added alongside this one - this test proves the API contract
-supports the full journey; it doesn't replace UI-level testing.
+This backend-driven test proves the REST contract supports the complete
+patient-to-public-pass lifecycle. The Expo patient app and React/Vite responder
+site now exist and are separately built/type-checked/tested in CI. Physical
+camera scanning and cross-device browser behavior remain manual release checks
+because they require real devices.
 
 ### Performance testing
 
@@ -98,11 +102,10 @@ Steps (tested against a real local run - see command output below):
    On Linux with a native k6 install, use `BASE_URL=http://localhost:8080`
    directly instead.
 
-Thresholds: p95 latency under 500ms, error rate under 1%. A real local run
-against the fake clinical adapter measured p95 ≈ 330ms with a 0% error rate
-at 10 virtual users - re-baseline once the real HAPI FHIR-backed clinical
-service (M4) is wired in, since that adds a network hop the fake adapter
-doesn't have.
+Thresholds: p95 latency under 500ms, error rate under 1%. The historical
+~330ms result was measured before the HAPI-backed clinical adapter landed, so
+performance should be re-baselined in the final demo environment with HAPI
+FHIR running.
 
 ## Resetting your environment
 
