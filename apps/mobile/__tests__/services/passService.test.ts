@@ -82,6 +82,8 @@ describe('pass and sharing contracts', () => {
           id: 'log-1',
           passId: 'pass-1',
           outcome: 'SUCCESS',
+          traceCode: 'MP-A1B2C3D4E5F60708',
+          responderDevice: 'iPhone · Safari',
           accessedAt: '2026-09-15T12:00:00Z',
         },
       ],
@@ -92,6 +94,8 @@ describe('pass and sharing contracts', () => {
       id: 'log-1',
       passId: 'pass-1',
       outcome: 'SUCCESS',
+      traceCode: 'MP-A1B2C3D4E5F60708',
+      responderDevice: 'iPhone · Safari',
       accessedAt: '2026-09-15T12:00:00Z',
     });
     expect(logs[0]).not.toHaveProperty('timestamp');
@@ -107,6 +111,8 @@ describe('pass and sharing contracts', () => {
         id: 'log-detail-1',
         passId: 'pass-9',
         outcome: 'SUCCESS',
+        traceCode: 'MP-1122334455667788',
+        responderDevice: 'Android device · Chrome',
         accessedAt: '2026-10-05T09:00:00Z',
       },
     } as never);
@@ -120,6 +126,8 @@ describe('pass and sharing contracts', () => {
       id: 'log-detail-1',
       passId: 'pass-9',
       outcome: 'SUCCESS',
+      traceCode: 'MP-1122334455667788',
+      responderDevice: 'Android device · Chrome',
       accessedAt: '2026-10-05T09:00:00Z',
     });
   });
