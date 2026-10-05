@@ -43,34 +43,91 @@ export default function PassesScreen() {
   const handleCreatePass = async () => {
     setActionError(null);
     if (categories.length === 0) {
-      setActionError('You must configure at least one shareable category in Sharing Preferences before generating a pass.');
+      setActionError(
+        'You must configure at least one shareable category in Sharing Preferences before generating a pass.'
+      );
       return;
     }
-    const newPass = await createPass(categories, expiryHours);
-    if (!newPass) {
-      setActionError('Failed to generate pass. Please try again.');
+
+    setIsCreatingPass(true);
+    try {
+      const newPass = await createPass(categories, expiryHours);
+      if (!newPass) {
+        setActionError('Failed to generate pass. Please try again.');
+      }
+    } finally {
+      setIsCreatingPass(false);
     }
   };
 
   const handleRevokePass = async (passId: string) => {
     setActionError(null);
-    const success = await revokePass(passId);
-    if (!success) {
-      setActionError('Failed to revoke pass. Please try again.');
+    setRevokingPassId(passId);
+    try {
+      const success = await revokePass(passId);
+      if (!success) {
+        setActionError('Failed to revoke pass. Please try again.');
+      }
+    } finally {
+      setRevokingPassId(null);
     }
+  };
+
+  const confirmRevokePass = (passId: string) => {
+    Alert.alert(
+      'Revoke emergency pass?',
+      'This immediately disables the current QR link.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Revoke',
+          style: 'destructive',
+          onPress: () => {
+            void handleRevokePass(passId);
+          },
+        },
+      ]
+    );
   };
 
   const handleRotatePass = async (passId: string) => {
     setActionError(null);
-    const rotated = await rotatePass(passId);
-    if (!rotated) {
-      setActionError('Failed to rotate pass link. Please try again.');
+    setRotatingPassId(passId);
+    try {
+      const rotated = await rotatePass(passId);
+      if (!rotated) {
+        setActionError('Failed to rotate pass link. Please try again.');
+      }
+    } finally {
+      setRotatingPassId(null);
     }
   };
 
   const handleOpenLogs = async (passId: string) => {
+    setSelectedAccessLog(null);
     setSelectedPassForLogs(passId);
     await loadAuditLogs(passId);
+  };
+
+  const handleViewAccessLog = async (logId: string) => {
+    setLoadingAccessLogId(logId);
+    setActionError(null);
+    try {
+      const detail = await loadAccessLogDetail(logId);
+      if (detail) {
+        setSelectedAccessLog(detail);
+      } else {
+        setActionError('Failed to load access-log details. Please try again.');
+      }
+    } finally {
+      setLoadingAccessLogId(null);
+    }
+  };
+
+  const closeAuditModal = () => {
+    setSelectedAccessLog(null);
+    setLoadingAccessLogId(null);
+    setSelectedPassForLogs(null);
   };
 
   if (isLoading && passes.length === 0) {
