@@ -1,5 +1,6 @@
 package com.medipass.pass;
 
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.CacheControl;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,11 +19,19 @@ public class PublicPassController {
     }
 
     @GetMapping("/{token}")
-    public ResponseEntity<PublicPassResponse> getPublicPass(@PathVariable String token) {
+    public ResponseEntity<PublicPassResponse> getPublicPass(
+            @PathVariable String token,
+            HttpServletRequest request
+    ) {
+        String responderDevice = ResponderDeviceResolver.resolve(
+                request.getHeader("User-Agent"),
+                request.getHeader("Sec-CH-UA-Model")
+        );
+
         return ResponseEntity.ok()
                 .cacheControl(CacheControl.noStore())
                 .header("Pragma", "no-cache")
                 .header("Referrer-Policy", "no-referrer")
-                .body(publicPassService.getPublicSummary(token));
+                .body(publicPassService.getPublicSummary(token, responderDevice));
     }
 }
