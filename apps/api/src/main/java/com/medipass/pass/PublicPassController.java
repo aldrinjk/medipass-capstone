@@ -1,5 +1,7 @@
 package com.medipass.pass;
 
+import org.springframework.http.CacheControl;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -16,7 +18,11 @@ public class PublicPassController {
     }
 
     @GetMapping("/{token}")
-    public PublicPassResponse getPublicPass(@PathVariable String token) {
-        return publicPassService.getPublicSummary(token);
+    public ResponseEntity<PublicPassResponse> getPublicPass(@PathVariable String token) {
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.noStore())
+                .header("Pragma", "no-cache")
+                .header("Referrer-Policy", "no-referrer")
+                .body(publicPassService.getPublicSummary(token));
     }
 }
