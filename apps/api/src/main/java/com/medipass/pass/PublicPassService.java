@@ -9,6 +9,8 @@ import com.medipass.patient.dto.EmergencyContactDto;
 import com.medipass.patient.dto.MedicationDto;
 import com.medipass.patient.dto.PatientProfileDto;
 import com.medipass.sharing.ShareCategory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,6 +20,8 @@ import java.util.Set;
 
 @Service
 public class PublicPassService {
+
+    private static final Logger log = LoggerFactory.getLogger(PublicPassService.class);
 
     private final EmergencyPassRepository repository;
     private final PassTokenService passTokenService;
@@ -74,7 +78,7 @@ public class PublicPassService {
                 emergencyContact
         );
 
-        auditService.record(
+        recordAuditSafely(
                 emergencyPass.getId(),
                 emergencyPass.getUserId(),
                 AccessOutcome.SUCCESS
@@ -86,7 +90,7 @@ public class PublicPassService {
     @Transactional(readOnly = true)
     public EmergencyPass resolveActivePass(String rawToken) {
         if (rawToken == null || rawToken.isBlank()) {
-            auditService.record(null, null, AccessOutcome.INVALID);
+            recordAuditSafely(null, null, AccessOutcome.INVALID);
             throw new PublicPassNotFoundException();
         }
 
@@ -95,12 +99,12 @@ public class PublicPassService {
                 .orElse(null);
 
         if (emergencyPass == null) {
-            auditService.record(null, null, AccessOutcome.INVALID);
+            recordAuditSafely(null, null, AccessOutcome.INVALID);
             throw new PublicPassNotFoundException();
         }
 
         if (emergencyPass.getStatus() == PassStatus.REVOKED) {
-            auditService.record(
+            recordAuditSafely(
                     emergencyPass.getId(),
                     emergencyPass.getUserId(),
                     AccessOutcome.REVOKED
@@ -110,7 +114,7 @@ public class PublicPassService {
 
         if (emergencyPass.getStatus() == PassStatus.EXPIRED
                 || !emergencyPass.getExpiresAt().isAfter(Instant.now())) {
-            auditService.record(
+            recordAuditSafely(
                     emergencyPass.getId(),
                     emergencyPass.getUserId(),
                     AccessOutcome.EXPIRED
@@ -119,5 +123,21 @@ public class PublicPassService {
         }
 
         return emergencyPass;
+    }
+
+    private void recordAuditSafely(UUID passId, UUID userId, AccessOutcome outcome) {
+        try {
+            auditService.record(passId, userId, outcome);
+        } catch (RuntimeException ex) {
+            // Emergency/public-pass behavior must remain deterministic even if
+            // the audit store is temporarily unavailable. Never log raw tokens
+            // or clinical data here.
+            log.warn(
+                    "Unable to persist public-pass audit outcome={} passId={}",
+                    outcome,
+                    passId,
+                    ex
+            );
+        }
     }
 }
