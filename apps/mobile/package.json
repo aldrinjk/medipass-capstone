@@ -33,7 +33,8 @@
     "jest": "^30.5.1",
     "jest-expo": "^57.0.5",
     "react-test-renderer": "^19.2.3",
-    "typescript": "~6.0.3"
+    "typescript": "~6.0.3",
+    "test-renderer": "^1.2.0"
   },
   "scripts": {
     "start": "expo start",
