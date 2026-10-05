@@ -54,6 +54,8 @@ export interface PublicPassSummary {
   medications: Medication[] | null
   conditions: Condition[] | null
   emergencyContact: EmergencyContact | null
+  accessTraceCode: string
+  responderDevice: string
 }
 
 /** Shared API error envelope returned by the Spring Boot backend. */
