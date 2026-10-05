@@ -12,6 +12,7 @@ import com.medipass.patient.dto.PatientProfileDto;
 import com.medipass.patient.dto.UpdatePatientProfileRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -134,6 +135,13 @@ public class PatientController {
     public ResponseEntity<Void> deleteCondition(Authentication authentication, @PathVariable UUID id) {
         clinicalService.deleteCondition(userId(authentication), id);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping(value = "/fhir-bundle", produces = "application/fhir+json")
+    public ResponseEntity<String> getFhirBundle(Authentication authentication) {
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType("application/fhir+json"))
+                .body(clinicalService.getFhirBundleJson(userId(authentication)));
     }
 
     @GetMapping("/emergency-contact")
