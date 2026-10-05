@@ -3,6 +3,7 @@ package com.medipass.patient;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.api.MethodOutcome;
 import ca.uhn.fhir.rest.client.api.IGenericClient;
+import ca.uhn.fhir.rest.gclient.TokenClientParam;
 import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
 import com.medipass.patient.dto.AllergyDto;
 import com.medipass.patient.dto.AllergyRequest;
@@ -308,8 +309,11 @@ public class HapiFhirClinicalService implements ClinicalService {
     }
 
     private Patient findOrCreatePatient(UUID userId) {
-        String query = "Patient?identifier=" + encode(USER_IDENTIFIER_SYSTEM + "|" + userId);
-        List<Patient> matches = search(query, Patient.class);
+        List<Patient> matches = searchByIdentifier(
+                Patient.class,
+                USER_IDENTIFIER_SYSTEM,
+                userId.toString()
+        );
         if (!matches.isEmpty()) {
             return matches.get(0);
         }
@@ -514,9 +518,11 @@ public class HapiFhirClinicalService implements ClinicalService {
             Class<T> type,
             Patient patient
     ) {
-        String query = resourceType + "?identifier="
-                + encode(RESOURCE_IDENTIFIER_SYSTEM + "|" + appId);
-        List<T> resources = search(query, type);
+        List<T> resources = searchByIdentifier(
+                type,
+                RESOURCE_IDENTIFIER_SYSTEM,
+                appId.toString()
+        );
         if (resources.isEmpty()) {
             throw new ClinicalResourceNotFoundException(resourceType + " not found.");
         }
@@ -548,6 +554,26 @@ public class HapiFhirClinicalService implements ClinicalService {
             Class<T> type
     ) {
         return search(resourceType + "?patient=" + encode("Patient/" + patientId), type);
+    }
+
+    private <T extends Resource> List<T> searchByIdentifier(
+            Class<T> type,
+            String system,
+            String value
+    ) {
+        Bundle bundle = client.search()
+                .forResource(type)
+                .where(new TokenClientParam("identifier").exactly().systemAndCode(system, value))
+                .returnBundle(Bundle.class)
+                .execute();
+
+        List<T> resources = new ArrayList<>();
+        for (Bundle.BundleEntryComponent entry : bundle.getEntry()) {
+            if (type.isInstance(entry.getResource())) {
+                resources.add(type.cast(entry.getResource()));
+            }
+        }
+        return resources;
     }
 
     private <T extends Resource> List<T> search(String relativeSearchUrl, Class<T> type) {
