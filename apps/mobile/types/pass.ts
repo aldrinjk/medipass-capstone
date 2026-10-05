@@ -38,6 +38,8 @@ export interface AccessLogResponse {
   id: string;
   passId: string;
   outcome: AccessOutcome;
+  traceCode?: string | null;
+  responderDevice?: string | null;
   accessedAt: string;
 }
 
