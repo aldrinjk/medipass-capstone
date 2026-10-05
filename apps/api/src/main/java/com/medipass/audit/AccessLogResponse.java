@@ -7,6 +7,8 @@ public record AccessLogResponse(
         UUID id,
         UUID passId,
         AccessOutcome outcome,
+        String traceCode,
+        String responderDevice,
         Instant accessedAt
 ) {
 }
