@@ -72,7 +72,7 @@ public class EmergencyPassService {
 
     @Transactional
     public PassMetadataResponse revokePass(UUID userId, UUID passId) {
-        EmergencyPass pass = repository.findByIdAndUserId(passId, userId)
+        EmergencyPass pass = repository.findByIdAndUserIdForUpdate(passId, userId)
                 .orElseThrow(PassNotFoundException::new);
 
         Instant now = Instant.now();
@@ -88,7 +88,7 @@ public class EmergencyPassService {
 
     @Transactional(noRollbackFor = PassLifecycleException.class)
     public RotatePassResponse rotatePass(UUID userId, UUID passId) {
-        EmergencyPass pass = repository.findByIdAndUserId(passId, userId)
+        EmergencyPass pass = repository.findByIdAndUserIdForUpdate(passId, userId)
                 .orElseThrow(PassNotFoundException::new);
 
         Instant now = Instant.now();
