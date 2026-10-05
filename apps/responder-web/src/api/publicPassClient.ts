@@ -36,6 +36,7 @@ export async function fetchPublicPass(token: string): Promise<PublicPassResult> 
         // The public endpoint is intentionally unauthenticated -- never
         // attach an Authorization header or credentials here.
         credentials: 'omit',
+        cache: 'no-store',
       },
     )
   } catch {
