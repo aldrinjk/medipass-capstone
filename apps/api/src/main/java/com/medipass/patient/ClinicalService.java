@@ -35,4 +35,6 @@ public interface ClinicalService {
 
     EmergencyContactDto getEmergencyContact(UUID userId);
     EmergencyContactDto updateEmergencyContact(UUID userId, EmergencyContactRequest request);
+
+    String getFhirBundleJson(UUID userId);
 }
