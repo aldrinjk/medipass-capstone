@@ -262,3 +262,93 @@ body {
     padding-top: 2rem;
   }
 }
+
+
+/* ---------- Privacy hardening for emergency summary ---------- */
+
+.summary-shell {
+  position: relative;
+  min-height: 100dvh;
+  overflow-x: hidden;
+}
+
+.privacy-banner {
+  position: relative;
+  z-index: 2;
+  padding: 0.75rem 0.875rem;
+  border: 1px solid #f3c969;
+  border-radius: 0.625rem;
+  background: #fff8e6;
+  color: #6b4f00;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.summary-watermark {
+  position: fixed;
+  inset: -15%;
+  z-index: 1;
+  pointer-events: none;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(220px, 1fr));
+  align-content: space-around;
+  justify-items: center;
+  gap: 3rem 1rem;
+  transform: rotate(-24deg);
+  opacity: 0.055;
+  color: #0b1220;
+  font-size: 0.9rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  user-select: none;
+}
+
+.summary-watermark span {
+  white-space: nowrap;
+}
+
+.privacy-shield {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  padding: 2rem;
+  text-align: center;
+  background: #0b1220;
+  color: #ffffff;
+}
+
+.privacy-shield strong {
+  font-size: 1.2rem;
+}
+
+.privacy-shield span {
+  max-width: 30rem;
+  color: #d7dce2;
+  line-height: 1.5;
+}
+
+.print-blocked {
+  display: none;
+}
+
+@media print {
+  .summary,
+  .summary-watermark,
+  .privacy-shield,
+  .privacy-banner {
+    display: none !important;
+  }
+
+  .print-blocked {
+    display: block !important;
+    padding: 2rem;
+    font-size: 1.1rem;
+    font-weight: 700;
+  }
+}
