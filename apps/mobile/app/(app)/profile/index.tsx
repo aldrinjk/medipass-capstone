@@ -1,6 +1,13 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import { useRouter } from 'expo-router';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  RefreshControl,
+} from 'react-native';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { usePatientProfile } from '../../../hooks/usePatientProfile';
 import { useAllergies } from '../../../hooks/useAllergies';
 import { useMedications } from '../../../hooks/useMedications';
@@ -10,13 +17,42 @@ import { Card, LoadingSpinner } from '../../../components';
 
 export default function ProfileIndexScreen() {
   const router = useRouter();
-  const { profile, isLoading } = usePatientProfile();
-  const { allergies } = useAllergies();
-  const { medications } = useMedications();
-  const { conditions } = useConditions();
-  const { contact } = useEmergencyContact();
+  const { profile, isLoading: isProfileLoading, loadProfile } = usePatientProfile();
+  const { allergies, loadAllergies } = useAllergies();
+  const { medications, loadMedications } = useMedications();
+  const { conditions, loadConditions } = useConditions();
+  const { contact, loadEmergencyContact } = useEmergencyContact();
+  const [refreshing, setRefreshing] = React.useState(false);
 
-  if (isLoading) {
+  const refreshProfileData = React.useCallback(async () => {
+    await Promise.all([
+      loadProfile(),
+      loadAllergies(),
+      loadMedications(),
+      loadConditions(),
+      loadEmergencyContact(),
+    ]);
+  }, [
+    loadProfile,
+    loadAllergies,
+    loadMedications,
+    loadConditions,
+    loadEmergencyContact,
+  ]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      void refreshProfileData();
+    }, [refreshProfileData])
+  );
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await refreshProfileData();
+    setRefreshing(false);
+  };
+
+  if (isProfileLoading && !profile && !refreshing) {
     return <LoadingSpinner message="Loading profile..." />;
   }
 
@@ -61,7 +97,13 @@ export default function ProfileIndexScreen() {
   ];
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.content}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#1E40AF']} />
+      }
+    >
       <Text style={styles.pageTitle}>Clinical Emergency Record</Text>
       <Text style={styles.pageSubtitle}>
         Manage the health data stored in your MediPass. Keep demographics, allergies,
