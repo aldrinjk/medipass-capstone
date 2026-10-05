@@ -166,13 +166,22 @@ class PublicPassTests {
                 Set.of(ShareCategory.ALLERGIES)
         );
 
-        mockMvc.perform(get("/api/v1/public/passes/{token}", rawToken))
-                .andExpect(status().isOk());
+        mockMvc.perform(get("/api/v1/public/passes/{token}", rawToken)
+                        .header(
+                                "User-Agent",
+                                "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) "
+                                        + "AppleWebKit/605.1.15 Version/18.0 Mobile/15E148 Safari/604.1"
+                        ))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accessTraceCode").value(org.hamcrest.Matchers.startsWith("MP-")))
+                .andExpect(jsonPath("$.responderDevice").value("iPhone · Safari"));
 
         PassAccessLog log = onlyAuditLog();
         assertEquals(AccessOutcome.SUCCESS, log.getOutcome());
         assertEquals(saved.getId(), log.getPassId());
         assertEquals(userId, log.getUserId());
+        assertNotNull(log.getTraceCode());
+        assertEquals("iPhone · Safari", log.getResponderDevice());
         assertNotNull(log.getAccessedAt());
     }
 
