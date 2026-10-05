@@ -24,6 +24,8 @@ describe('fetchPublicPass', () => {
       medications: null,
       conditions: null,
       emergencyContact: null,
+      accessTraceCode: 'MP-TESTTRACE000001',
+      responderDevice: 'iPhone · Safari',
     }
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(200, summary)))
 
@@ -43,6 +45,10 @@ describe('fetchPublicPass', () => {
         medications: null,
         conditions: null,
         emergencyContact: null,
+        accessTraceCode: 'MP-TESTTRACE000001',
+        responderDevice: 'iPhone · Safari',
+      accessTraceCode: 'MP-TESTTRACE000001',
+      responderDevice: 'iPhone · Safari',
       }),
     )
     vi.stubGlobal('fetch', fetchMock)
