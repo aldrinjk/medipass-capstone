@@ -6,6 +6,11 @@ import {
   getRefreshToken,
   saveAuthSession,
 } from '../../services/secureStore';
+import {
+  clearAllCachedPublicUrls,
+  getCachedPublicUrl,
+  setCachedPublicUrl,
+} from '../../services/passUrlCache';
 
 jest.mock('../../services/apiClient', () => {
   const actual = jest.requireActual('../../services/apiClient');
@@ -37,6 +42,7 @@ const me = {
 
 describe('authService contracts', () => {
   beforeEach(async () => {
+    await clearAllCachedPublicUrls();
     await clearAuthSession();
     mockedIsMockEnabled.mockReturnValue(false);
     mockedClient.get.mockReset();
@@ -44,6 +50,7 @@ describe('authService contracts', () => {
   });
 
   afterEach(async () => {
+    await clearAllCachedPublicUrls();
     await clearAuthSession();
   });
 
@@ -114,12 +121,25 @@ describe('authService contracts', () => {
 
   it('clears the session when /auth/me fails during restore', async () => {
     await saveAuthSession('stored-access', 'stored-refresh', 'restore.test@example.com');
+    await setCachedPublicUrl('pass-restore', 'https://example.test/passes/restore-token');
     mockedClient.get.mockRejectedValueOnce(new Error('unauthorized'));
 
     const session = await authService.restoreSession();
 
     expect(session).toBeNull();
     expect(await getAccessToken()).toBeNull();
+    expect(await getCachedPublicUrl('pass-restore')).toBeNull();
+  });
+
+  it('clears cached emergency pass URLs on logout', async () => {
+    await saveAuthSession('stored-access', 'stored-refresh', 'logout.test@example.com');
+    await setCachedPublicUrl('pass-1', 'https://example.test/passes/raw-token');
+    mockedClient.post.mockResolvedValueOnce({ data: null } as never);
+
+    await authService.logout();
+
+    expect(await getAccessToken()).toBeNull();
+    expect(await getCachedPublicUrl('pass-1')).toBeNull();
   });
 
   it('persists a rotated refresh token from /auth/refresh', async () => {
