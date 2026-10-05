@@ -45,6 +45,10 @@ public class PassAccessLog {
     protected PassAccessLog() {
     }
 
+    public PassAccessLog(UUID passId, UUID userId, AccessOutcome outcome, String correlationId) {
+        this(passId, userId, outcome, correlationId, null, null);
+    }
+
     public PassAccessLog(
             UUID passId,
             UUID userId,
