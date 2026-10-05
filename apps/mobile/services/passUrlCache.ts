@@ -1,4 +1,4 @@
-import { getItem, setItem } from './secureStore';
+import { deleteItem, getItem, setItem } from './secureStore';
 
 const CACHE_KEY = 'medipass_pass_public_urls';
 const MAX_ENTRIES = 25;
@@ -37,4 +37,8 @@ export async function clearCachedPublicUrl(passId: string): Promise<void> {
   const cache = await readCache();
   delete cache[passId];
   await writeCache(cache);
+}
+
+export async function clearAllCachedPublicUrls(): Promise<void> {
+  await deleteItem(CACHE_KEY);
 }
