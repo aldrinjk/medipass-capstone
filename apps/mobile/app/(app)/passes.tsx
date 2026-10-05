@@ -248,12 +248,47 @@ export default function PassesScreen() {
               />
             </View>
             <ScrollView>
-              {selectedPassForLogs && (
-                <AccessHistoryList
-                  logs={auditLogs[selectedPassForLogs] || []}
-                  passId={selectedPassForLogs}
-                />
-              )}
+              {selectedAccessLog ? (
+                <Card>
+                  <Text style={styles.detailTitle}>Access record details</Text>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Outcome</Text>
+                    <Text style={styles.detailValue}>{selectedAccessLog.outcome}</Text>
+                  </View>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Accessed</Text>
+                    <Text style={styles.detailValue}>
+                      {new Date(selectedAccessLog.accessedAt).toLocaleString()}
+                    </Text>
+                  </View>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Pass ID</Text>
+                    <Text style={styles.detailValue}>{selectedAccessLog.passId}</Text>
+                  </View>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Record ID</Text>
+                    <Text style={styles.detailValue}>{selectedAccessLog.id}</Text>
+                  </View>
+                  <Button
+                    title="Back to access history"
+                    variant="outline"
+                    size="sm"
+                    onPress={() => setSelectedAccessLog(null)}
+                    style={styles.detailBackButton}
+                  />
+                </Card>
+              ) : selectedPassForLogs ? (
+                <>
+                  {loadingAccessLogId ? (
+                    <LoadingSpinner message="Loading access record..." />
+                  ) : null}
+                  <AccessHistoryList
+                    logs={auditLogs[selectedPassForLogs] || []}
+                    passId={selectedPassForLogs}
+                    onViewDetails={handleViewAccessLog}
+                  />
+                </>
+              ) : null}
             </ScrollView>
           </View>
         </View>
@@ -358,5 +393,29 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     paddingHorizontal: 0,
     paddingVertical: 0,
+  },
+  detailTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 12,
+  },
+  detailRow: {
+    marginBottom: 10,
+  },
+  detailLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#6B7280',
+    textTransform: 'uppercase',
+    marginBottom: 2,
+  },
+  detailValue: {
+    fontSize: 14,
+    color: '#111827',
+  },
+  detailBackButton: {
+    marginTop: 8,
+    alignSelf: 'flex-start',
   },
 });
