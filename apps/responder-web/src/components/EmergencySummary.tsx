@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type SyntheticEvent } from 'react'
 import type { PublicPassSummary } from '../api/types'
 import { formatAge, formatExpiry } from '../utils/formatters'
 
@@ -41,7 +41,7 @@ export function EmergencySummary({ summary }: EmergencySummaryProps) {
     }
   }, [])
 
-  const blockDataExtraction = (event: React.SyntheticEvent) => {
+  const blockDataExtraction = (event: SyntheticEvent) => {
     event.preventDefault()
   }
 
