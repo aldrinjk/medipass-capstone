@@ -102,8 +102,18 @@ export function usePasses() {
       const logs = await passService.getPassAuditLogs(passId);
       setAuditLogs((prev) => ({ ...prev, [passId]: logs }));
       return logs;
-    } catch {
+    } catch (err) {
+      setError(getErrorMessage(err));
       return [];
+    }
+  };
+
+  const loadAccessLogDetail = async (logId: string): Promise<AccessLogResponse | null> => {
+    try {
+      return await passService.getAccessLog(logId);
+    } catch (err) {
+      setError(getErrorMessage(err));
+      return null;
     }
   };
 
@@ -122,5 +132,6 @@ export function usePasses() {
     revokePass,
     rotatePass,
     loadAuditLogs,
+    loadAccessLogDetail,
   };
 }
