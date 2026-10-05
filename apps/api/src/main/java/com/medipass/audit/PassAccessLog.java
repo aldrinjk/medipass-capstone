@@ -33,17 +33,32 @@ public class PassAccessLog {
     @Column(name = "correlation_id", length = 64)
     private String correlationId;
 
+    @Column(name = "trace_code", length = 32)
+    private String traceCode;
+
+    @Column(name = "responder_device", length = 120)
+    private String responderDevice;
+
     @Column(name = "accessed_at", nullable = false, insertable = false, updatable = false)
     private Instant accessedAt;
 
     protected PassAccessLog() {
     }
 
-    public PassAccessLog(UUID passId, UUID userId, AccessOutcome outcome, String correlationId) {
+    public PassAccessLog(
+            UUID passId,
+            UUID userId,
+            AccessOutcome outcome,
+            String correlationId,
+            String traceCode,
+            String responderDevice
+    ) {
         this.passId = passId;
         this.userId = userId;
         this.outcome = outcome;
         this.correlationId = correlationId;
+        this.traceCode = traceCode;
+        this.responderDevice = responderDevice;
     }
 
     public UUID getId() {
@@ -64,6 +79,14 @@ public class PassAccessLog {
 
     public String getCorrelationId() {
         return correlationId;
+    }
+
+    public String getTraceCode() {
+        return traceCode;
+    }
+
+    public String getResponderDevice() {
+        return responderDevice;
     }
 
     public Instant getAccessedAt() {
