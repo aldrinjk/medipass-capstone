@@ -10,6 +10,7 @@ import com.medipass.pass.PassStatus;
 import com.medipass.pass.PublicPassGoneException;
 import com.medipass.pass.PublicPassNotFoundException;
 import com.medipass.patient.ClinicalResourceNotFoundException;
+import com.medipass.patient.ClinicalServiceUnavailableException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import java.util.LinkedHashMap;
@@ -131,6 +132,21 @@ public class GlobalExceptionHandler {
                 ApiError.of(
                         HttpStatus.NOT_FOUND.value(),
                         "CLINICAL_RESOURCE_NOT_FOUND",
+                        ex.getMessage(),
+                        request.getRequestURI()
+                )
+        );
+    }
+
+    @ExceptionHandler(ClinicalServiceUnavailableException.class)
+    public ResponseEntity<ApiError> handleClinicalServiceUnavailable(
+            ClinicalServiceUnavailableException ex,
+            HttpServletRequest request
+    ) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(
+                ApiError.of(
+                        HttpStatus.SERVICE_UNAVAILABLE.value(),
+                        "CLINICAL_SERVICE_UNAVAILABLE",
                         ex.getMessage(),
                         request.getRequestURI()
                 )
