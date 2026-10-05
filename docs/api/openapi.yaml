@@ -132,9 +132,8 @@ paths:
       tags: [FHIR, Admin]
       security: [{bearerAuth: []}]
       description: >
-        Accepts a FHIR Bundle (or a bare array/single resource). Currently backed by a
-        fake adapter that reports resource counts without persisting anything, pending
-        the FHIR module (see docs/testing/README.md).
+        Accepts synthetic FHIR R4 data as a Bundle, bare array, or single resource and
+        persists it to the configured HAPI FHIR server. Real patient data is prohibited.
       responses:
         "201": {description: Synthetic data imported, content: {application/json: {schema: {$ref: '#/components/schemas/SyntheaImportResponse'}}}}
         "403": {description: Caller is authenticated but not an admin}
