@@ -262,6 +262,37 @@ export default function PassesScreen() {
                     </Text>
                   </View>
                   <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Responder</Text>
+                    <Text style={styles.detailValue}>
+                      {selectedAccessLog.responderName || 'Unavailable for older access records'}
+                    </Text>
+                  </View>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Role / organization</Text>
+                    <Text style={styles.detailValue}>
+                      {[
+                        selectedAccessLog.responderRole,
+                        selectedAccessLog.responderOrganization,
+                      ].filter(Boolean).join(' · ') || 'Not provided'}
+                    </Text>
+                  </View>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Verification</Text>
+                    <Text style={styles.detailValue}>
+                      {selectedAccessLog.verificationMethod === 'PHONE_OTP'
+                        ? `Phone verified${selectedAccessLog.responderPhoneLast4 ? ` · mobile ending ${selectedAccessLog.responderPhoneLast4}` : ''}. Name is self-declared.`
+                        : selectedAccessLog.verificationMethod === 'EMERGENCY_OVERRIDE'
+                          ? 'Unverified emergency override. Identity is self-declared.'
+                          : selectedAccessLog.verificationMethod?.replaceAll('_', ' ') || 'Unavailable for older access records'}
+                    </Text>
+                  </View>
+                  {selectedAccessLog.verificationNote ? (
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>Emergency reason</Text>
+                      <Text style={styles.detailValue}>{selectedAccessLog.verificationNote}</Text>
+                    </View>
+                  ) : null}
+                  <View style={styles.detailRow}>
                     <Text style={styles.detailLabel}>Responder device</Text>
                     <Text style={styles.detailValue}>
                       {selectedAccessLog.responderDevice || 'Unavailable'}
