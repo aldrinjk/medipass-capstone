@@ -26,6 +26,11 @@ describe('fetchPublicPass', () => {
       emergencyContact: null,
       accessTraceCode: 'MP-TESTTRACE000001',
       responderDevice: 'iPhone · Safari',
+      responderName: 'Demo Responder',
+      responderRole: 'Paramedic',
+      responderOrganization: 'Demo EMS',
+      responderPhoneLast4: '0199',
+      responderVerificationMethod: 'PHONE_OTP',
     }
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(200, summary)))
 
@@ -47,6 +52,11 @@ describe('fetchPublicPass', () => {
         emergencyContact: null,
         accessTraceCode: 'MP-TESTTRACE000001',
         responderDevice: 'iPhone · Safari',
+      responderName: 'Demo Responder',
+      responderRole: 'Paramedic',
+      responderOrganization: 'Demo EMS',
+      responderPhoneLast4: '0199',
+      responderVerificationMethod: 'PHONE_OTP',
       }),
     )
     vi.stubGlobal('fetch', fetchMock)
