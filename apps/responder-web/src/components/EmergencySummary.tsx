@@ -53,10 +53,11 @@ export function EmergencySummary({
     summary.responderVerificationMethod === 'PHONE_OTP'
       ? verifiedPhoneForWatermark || maskedPhoneLabel
       : null
-  const watermarkPrimary = `MEDIPASS · ${summary.responderName} · ${verification}`
-  const watermarkSecondary = [watermarkPhoneLabel, summary.accessTraceCode]
+  const watermarkResponder = `MEDIPASS · ${summary.responderName}`
+  const watermarkPhone = [watermarkPhoneLabel, verification]
     .filter(Boolean)
     .join(' · ')
+  const watermarkTrace = summary.accessTraceCode
 
   useEffect(() => {
     const updateVisibility = () => {
@@ -90,8 +91,9 @@ export function EmergencySummary({
       <div className="summary-watermark" aria-hidden="true">
         {Array.from({ length: 6 }, (_, index) => (
           <div className="summary-watermark-item" key={index}>
-            <span>{watermarkPrimary}</span>
-            <span>{watermarkSecondary}</span>
+            <span>{watermarkResponder}</span>
+            <span>{watermarkPhone}</span>
+            <span>{watermarkTrace}</span>
           </div>
         ))}
       </div>
