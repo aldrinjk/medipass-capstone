@@ -47,6 +47,22 @@ export const AccessHistoryList: React.FC<AccessHistoryListProps> = ({
             </Text>
             <Badge label={log.outcome} variant={getStatusVariant(log.outcome)} />
           </View>
+          {log.responderName ? (
+            <Text style={styles.responderText}>
+              {log.responderName}
+              {log.responderRole ? ` · ${log.responderRole}` : ''}
+              {log.responderOrganization ? ` · ${log.responderOrganization}` : ''}
+            </Text>
+          ) : null}
+          {log.verificationMethod ? (
+            <Text style={styles.verificationText}>
+              {log.verificationMethod === 'PHONE_OTP'
+                ? `PHONE VERIFIED${log.responderPhoneLast4 ? ` · ••••${log.responderPhoneLast4}` : ''}`
+                : log.verificationMethod === 'EMERGENCY_OVERRIDE'
+                  ? 'UNVERIFIED EMERGENCY OVERRIDE'
+                  : log.verificationMethod.replaceAll('_', ' ')}
+            </Text>
+          ) : null}
           <Text style={styles.deviceText}>
             {log.responderDevice || 'Responder device unavailable'}
           </Text>
@@ -89,6 +105,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#374151',
+  },
+  responderText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 2,
+  },
+  verificationText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#1E40AF',
+    marginBottom: 3,
   },
   deviceText: {
     fontSize: 13,
