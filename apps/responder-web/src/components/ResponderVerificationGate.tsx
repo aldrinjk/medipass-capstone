@@ -8,7 +8,7 @@ import type { ResponderVerificationStartResponse } from '../api/types'
 
 interface ResponderVerificationGateProps {
   token: string
-  onVerified: (verificationToken: string) => void
+  onVerified: (verificationToken: string, verifiedPhone?: string) => void
 }
 
 export function ResponderVerificationGate({
@@ -59,7 +59,7 @@ export function ResponderVerificationGate({
         code,
       })
       if (result.kind === 'success') {
-        onVerified(result.data.verificationToken)
+        onVerified(result.data.verificationToken, phone.trim())
       } else {
         setError(result.message)
       }
