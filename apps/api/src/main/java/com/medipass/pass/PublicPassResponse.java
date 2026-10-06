@@ -23,6 +23,11 @@ public record PublicPassResponse(
         List<ConditionDto> conditions,
         EmergencyContactDto emergencyContact,
         String accessTraceCode,
-        String responderDevice
+        String responderDevice,
+        String responderName,
+        String responderRole,
+        String responderOrganization,
+        String responderPhoneLast4,
+        ResponderVerificationMethod responderVerificationMethod
 ) {
 }
