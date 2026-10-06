@@ -287,25 +287,42 @@ body {
 
 .summary-watermark {
   position: fixed;
-  inset: -15%;
+  inset: -8%;
   z-index: 1;
   pointer-events: none;
   display: grid;
-  grid-template-columns: repeat(2, minmax(220px, 1fr));
+  grid-template-columns: 1fr;
   align-content: space-around;
   justify-items: center;
-  gap: 3rem 1rem;
-  transform: rotate(-24deg);
-  opacity: 0.085;
+  gap: 5rem;
+  transform: rotate(-17deg);
+  opacity: 0.075;
   color: #0b1220;
-  font-size: 0.9rem;
+  font-size: 0.72rem;
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.055em;
   user-select: none;
 }
 
-.summary-watermark span {
-  white-space: nowrap;
+.summary-watermark-item {
+  width: 92%;
+  max-width: 540px;
+  text-align: center;
+  line-height: 1.45;
+}
+
+.summary-watermark-item span {
+  display: block;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+@media (min-width: 760px) {
+  .summary-watermark {
+    grid-template-columns: repeat(2, minmax(280px, 1fr));
+    gap: 6rem 3rem;
+    font-size: 0.78rem;
+  }
 }
 
 .privacy-shield {
@@ -362,4 +379,185 @@ body {
 
 .privacy-banner span {
   display: block;
+}
+
+
+/* ---------- Responder verification gate ---------- */
+
+.verification-page {
+  min-height: 100dvh;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 1.25rem 1rem 3rem;
+}
+
+.verification-card {
+  width: 100%;
+  max-width: 520px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 1rem;
+  padding: 1.25rem;
+  box-shadow: 0 10px 30px rgba(11, 18, 32, 0.06);
+}
+
+.verification-eyebrow {
+  margin: 0 0 0.3rem;
+  color: var(--color-primary);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.verification-card h1 {
+  margin: 0;
+  font-size: 1.55rem;
+}
+
+.verification-copy,
+.verification-privacy {
+  color: var(--color-text-muted);
+  line-height: 1.5;
+}
+
+.verification-copy {
+  margin: 0.75rem 0 1.1rem;
+}
+
+.verification-privacy {
+  margin: 1rem 0 0;
+  font-size: 0.78rem;
+}
+
+.verification-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.verification-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-weight: 700;
+  font-size: 0.88rem;
+}
+
+.verification-form input,
+.verification-form textarea {
+  width: 100%;
+  border: 1px solid #b9c1cb;
+  border-radius: 0.65rem;
+  background: #fff;
+  color: var(--color-text);
+  font: inherit;
+  font-weight: 500;
+  min-height: 46px;
+  padding: 0.7rem 0.8rem;
+}
+
+.verification-form textarea {
+  min-height: 92px;
+  resize: vertical;
+}
+
+.verification-form input:focus,
+.verification-form textarea:focus {
+  outline: 3px solid rgba(10, 77, 140, 0.14);
+  border-color: var(--color-primary);
+}
+
+.verification-form small {
+  color: var(--color-text-muted);
+  font-size: 0.73rem;
+  font-weight: 500;
+}
+
+.verification-primary,
+.verification-secondary,
+.verification-danger {
+  min-height: 46px;
+  border-radius: 999px;
+  padding: 0.7rem 1rem;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.verification-primary {
+  border: none;
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.verification-secondary {
+  border: 1px solid var(--color-border);
+  background: #fff;
+  color: var(--color-text);
+}
+
+.verification-danger {
+  border: 1px solid #b42318;
+  background: #fff1f0;
+  color: #8a1c14;
+}
+
+.verification-primary:disabled,
+.verification-secondary:disabled,
+.verification-danger:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.verification-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 1.25rem 0 0.9rem;
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.verification-divider::before,
+.verification-divider::after {
+  content: '';
+  height: 1px;
+  flex: 1;
+  background: var(--color-border);
+}
+
+.verification-error {
+  margin: 0;
+  color: var(--color-error);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.verification-warning {
+  margin: 0;
+  padding: 0.8rem;
+  border-radius: 0.65rem;
+  background: #fff8e6;
+  color: #6b4f00;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.verification-dev-code {
+  margin: 0 0 1rem;
+  padding: 0.8rem;
+  border: 1px dashed #b45309;
+  border-radius: 0.65rem;
+  background: #fff8e6;
+  color: #6b4f00;
+  line-height: 1.45;
+  font-size: 0.85rem;
+}
+
+.verification-override {
+  margin-top: 0.5rem;
 }
