@@ -4,6 +4,7 @@ import { formatAge, formatExpiry } from '../utils/formatters'
 
 interface EmergencySummaryProps {
   summary: PublicPassSummary
+  verifiedPhoneForWatermark?: string
 }
 
 function verificationLabel(
@@ -28,7 +29,10 @@ function verificationLabel(
   }
 }
 
-export function EmergencySummary({ summary }: EmergencySummaryProps) {
+export function EmergencySummary({
+  summary,
+  verifiedPhoneForWatermark,
+}: EmergencySummaryProps) {
   const { demographics, allergies, medications, conditions, emergencyContact } = summary
   const age = demographics ? formatAge(demographics.birthDate) : null
   const [isObscured, setIsObscured] = useState(false)
@@ -42,11 +46,17 @@ export function EmergencySummary({ summary }: EmergencySummaryProps) {
     summary.responderRole,
     summary.responderOrganization,
   ].filter(Boolean).join(' · ')
-  const phoneLabel = summary.responderPhoneLast4
+  const maskedPhoneLabel = summary.responderPhoneLast4
     ? `••••${summary.responderPhoneLast4}`
     : null
+  const watermarkPhoneLabel =
+    summary.responderVerificationMethod === 'PHONE_OTP'
+      ? verifiedPhoneForWatermark || maskedPhoneLabel
+      : null
   const watermarkPrimary = `MEDIPASS · ${summary.responderName} · ${verification}`
-  const watermarkSecondary = [phoneLabel, summary.accessTraceCode].filter(Boolean).join(' · ')
+  const watermarkSecondary = [watermarkPhoneLabel, summary.accessTraceCode]
+    .filter(Boolean)
+    .join(' · ')
 
   useEffect(() => {
     const updateVisibility = () => {
@@ -101,8 +111,8 @@ export function EmergencySummary({ summary }: EmergencySummaryProps) {
           <span>
             {summary.responderVerificationMethod === 'PHONE_OTP'
               ? summary.responderVerificationNote?.startsWith('Development OTP')
-                ? `Development OTP simulation ${phoneLabel ?? ''} · No SMS sent · Name supplied by responder`
-                : `Phone verified ${phoneLabel ?? ''} · Name supplied by responder`
+                ? `Development OTP simulation ${maskedPhoneLabel ?? ''} · No SMS sent · Name supplied by responder`
+                : `Phone verified ${maskedPhoneLabel ?? ''} · Name supplied by responder`
               : summary.responderVerificationMethod === 'EMERGENCY_OVERRIDE'
                 ? 'Unverified emergency override · Identity self-declared'
                 : verification}
