@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Public, unauthenticated emergency-summary viewer opened when a responder scans a MediPass QR code.",
+  "description": "Public emergency-summary viewer with responder verification opened from a MediPass QR code.",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
