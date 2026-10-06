@@ -6,10 +6,15 @@ interface EmergencySummaryProps {
   summary: PublicPassSummary
 }
 
-function verificationLabel(method: ResponderVerificationMethod) {
+function verificationLabel(
+  method: ResponderVerificationMethod,
+  verificationNote?: string | null,
+) {
   switch (method) {
     case 'PHONE_OTP':
-      return 'PHONE VERIFIED'
+      return verificationNote?.startsWith('Development OTP')
+        ? 'DEMO OTP FLOW'
+        : 'PHONE VERIFIED'
     case 'EMERGENCY_OVERRIDE':
       return 'UNVERIFIED EMERGENCY ACCESS'
     case 'AADHAAR_OFFLINE':
@@ -28,7 +33,10 @@ export function EmergencySummary({ summary }: EmergencySummaryProps) {
   const age = demographics ? formatAge(demographics.birthDate) : null
   const [isObscured, setIsObscured] = useState(false)
 
-  const verification = verificationLabel(summary.responderVerificationMethod)
+  const verification = verificationLabel(
+    summary.responderVerificationMethod,
+    summary.responderVerificationNote,
+  )
   const responderIdentity = [
     summary.responderName,
     summary.responderRole,
@@ -92,7 +100,9 @@ export function EmergencySummary({ summary }: EmergencySummaryProps) {
           <span>Responder: {responderIdentity}</span>
           <span>
             {summary.responderVerificationMethod === 'PHONE_OTP'
-              ? `Phone verified ${phoneLabel ?? ''} · Name supplied by responder`
+              ? summary.responderVerificationNote?.startsWith('Development OTP')
+                ? `Development OTP simulation ${phoneLabel ?? ''} · No SMS sent · Name supplied by responder`
+                : `Phone verified ${phoneLabel ?? ''} · Name supplied by responder`
               : summary.responderVerificationMethod === 'EMERGENCY_OVERRIDE'
                 ? 'Unverified emergency override · Identity self-declared'
                 : verification}
