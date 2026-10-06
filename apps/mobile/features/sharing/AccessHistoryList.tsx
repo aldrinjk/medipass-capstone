@@ -57,7 +57,7 @@ export const AccessHistoryList: React.FC<AccessHistoryListProps> = ({
           {log.verificationMethod ? (
             <Text style={styles.verificationText}>
               {log.verificationMethod === 'PHONE_OTP'
-                ? `PHONE VERIFIED${log.responderPhoneLast4 ? ` · ••••${log.responderPhoneLast4}` : ''}`
+                ? `${log.verificationNote?.startsWith('Development OTP') ? 'DEMO OTP FLOW' : 'PHONE VERIFIED'}${log.responderPhoneLast4 ? ` · ••••${log.responderPhoneLast4}` : ''}`
                 : log.verificationMethod === 'EMERGENCY_OVERRIDE'
                   ? 'UNVERIFIED EMERGENCY OVERRIDE'
                   : log.verificationMethod.replaceAll('_', ' ')}
