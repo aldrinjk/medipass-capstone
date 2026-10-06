@@ -162,9 +162,14 @@ public class ResponderVerificationChallenge {
         );
     }
 
-    public void activatePhoneVerification(String tokenHash, Instant sessionExpiry) {
+    public void activatePhoneVerification(
+            String tokenHash,
+            Instant sessionExpiry,
+            String verificationNote
+    ) {
         this.status = ResponderVerificationStatus.ACTIVE;
         this.verificationMethod = ResponderVerificationMethod.PHONE_OTP;
+        this.verificationNote = verificationNote;
         this.accessTokenHash = tokenHash;
         this.sessionExpiresAt = sessionExpiry;
         this.verifiedAt = Instant.now();
