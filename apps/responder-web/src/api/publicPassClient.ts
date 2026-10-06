@@ -1,29 +1,35 @@
 import { API_BASE_URL } from './config'
-import type { ApiErrorBody, PublicPassSummary } from './types'
+import type {
+  ApiErrorBody,
+  PublicPassSummary,
+  ResponderVerificationSessionResponse,
+  ResponderVerificationStartResponse,
+} from './types'
 
 export type PublicPassResult =
   | { kind: 'success'; data: PublicPassSummary }
-  /** Token does not correspond to any pass (HTTP 404). */
+  | { kind: 'verification-required' }
   | { kind: 'not-found' }
-  /** Pass exists but is expired or revoked (HTTP 410). */
   | { kind: 'gone'; reason: 'expired' | 'revoked' | 'unknown' }
-  /** Reachable but returned something unexpected. */
   | { kind: 'error'; message: string }
-  /** Fetch itself failed (offline, DNS, CORS, timeout). */
   | { kind: 'network-error' }
 
-/**
- * Fetches the filtered public emergency summary for a scanned pass token.
- *
- * Security notes (see docs/team-handoffs section 6.8):
- * - The token is never written to console/analytics, in dev or prod.
- * - The response is rendered as-is; unshared categories are simply absent
- *   from the payload and this client never tries to infer or backfill them.
- */
-export async function fetchPublicPass(token: string): Promise<PublicPassResult> {
+export type VerificationActionResult<T> =
+  | { kind: 'success'; data: T }
+  | { kind: 'error'; message: string }
+
+export async function fetchPublicPass(
+  token: string,
+  verificationToken?: string,
+): Promise<PublicPassResult> {
   const trimmedToken = token.trim()
   if (trimmedToken.length === 0) {
     return { kind: 'not-found' }
+  }
+
+  const headers: Record<string, string> = { Accept: 'application/json' }
+  if (verificationToken) {
+    headers['X-MediPass-Verification'] = verificationToken
   }
 
   let response: Response
@@ -32,9 +38,7 @@ export async function fetchPublicPass(token: string): Promise<PublicPassResult> 
       `${API_BASE_URL}/api/v1/public/passes/${encodeURIComponent(trimmedToken)}`,
       {
         method: 'GET',
-        headers: { Accept: 'application/json' },
-        // The public endpoint is intentionally unauthenticated -- never
-        // attach an Authorization header or credentials here.
+        headers,
         credentials: 'omit',
         cache: 'no-store',
       },
@@ -45,11 +49,14 @@ export async function fetchPublicPass(token: string): Promise<PublicPassResult> 
 
   if (response.status === 200) {
     try {
-      const data = (await response.json()) as PublicPassSummary
-      return { kind: 'success', data }
+      return { kind: 'success', data: (await response.json()) as PublicPassSummary }
     } catch {
       return { kind: 'error', message: 'The server returned an unreadable response.' }
     }
+  }
+
+  if (response.status === 428) {
+    return { kind: 'verification-required' }
   }
 
   if (response.status === 404) {
@@ -57,13 +64,98 @@ export async function fetchPublicPass(token: string): Promise<PublicPassResult> 
   }
 
   if (response.status === 410) {
-    const reason = await goneReason(response)
-    return { kind: 'gone', reason }
+    return { kind: 'gone', reason: await goneReason(response) }
   }
 
   return {
     kind: 'error',
-    message: `Unexpected response from the server (HTTP ${response.status}).`,
+    message: await apiMessage(response, `Unexpected response from the server (HTTP ${response.status}).`),
+  }
+}
+
+export async function startResponderVerification(
+  token: string,
+  body: { name: string; role: string; organization: string; phone: string },
+): Promise<VerificationActionResult<ResponderVerificationStartResponse>> {
+  return postVerification(
+    token,
+    'verification/start',
+    body,
+  )
+}
+
+export async function confirmResponderVerification(
+  token: string,
+  body: { challengeId: string; code: string },
+): Promise<VerificationActionResult<ResponderVerificationSessionResponse>> {
+  return postVerification(
+    token,
+    'verification/confirm',
+    body,
+  )
+}
+
+export async function startResponderEmergencyOverride(
+  token: string,
+  body: { name: string; role: string; organization: string; reason: string },
+): Promise<VerificationActionResult<ResponderVerificationSessionResponse>> {
+  return postVerification(
+    token,
+    'verification/emergency-override',
+    body,
+  )
+}
+
+async function postVerification<T>(
+  token: string,
+  path: string,
+  body: unknown,
+): Promise<VerificationActionResult<T>> {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/api/v1/public/passes/${encodeURIComponent(token.trim())}/${path}`,
+      {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+        credentials: 'omit',
+        cache: 'no-store',
+        body: JSON.stringify(body),
+      },
+    )
+
+    if (response.ok) {
+      return { kind: 'success', data: (await response.json()) as T }
+    }
+
+    const fallback =
+      response.status === 404
+        ? 'This emergency pass was not found.'
+        : response.status === 410
+          ? 'This emergency pass is no longer active.'
+          : 'Responder verification could not be completed.'
+
+    return { kind: 'error', message: await apiMessage(response, fallback) }
+  } catch {
+    return {
+      kind: 'error',
+      message: 'MediPass could not be reached. Check the connection and try again.',
+    }
+  }
+}
+
+async function apiMessage(response: Response, fallback: string): Promise<string> {
+  try {
+    const body = (await response.json()) as ApiErrorBody
+    if (body.validationErrors) {
+      const first = Object.values(body.validationErrors)[0]
+      if (first) return first
+    }
+    return body.message || fallback
+  } catch {
+    return fallback
   }
 }
 
