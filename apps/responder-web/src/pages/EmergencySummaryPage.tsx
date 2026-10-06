@@ -1,12 +1,19 @@
+import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { EmergencySummary } from '../components/EmergencySummary'
 import { LoadingScreen } from '../components/LoadingScreen'
+import { ResponderVerificationGate } from '../components/ResponderVerificationGate'
 import { StatusScreen } from '../components/StatusScreen'
 import { usePublicPass } from '../hooks/usePublicPass'
 
 export function EmergencySummaryPage() {
   const { token } = useParams<{ token: string }>()
-  const state = usePublicPass(token)
+  const [verificationToken, setVerificationToken] = useState<string>()
+  const state = usePublicPass(token, verificationToken)
+
+  useEffect(() => {
+    setVerificationToken(undefined)
+  }, [token])
 
   if (state.status === 'loading') {
     return <LoadingScreen />
@@ -15,6 +22,21 @@ export function EmergencySummaryPage() {
   switch (state.kind) {
     case 'success':
       return <EmergencySummary summary={state.data} />
+
+    case 'verification-required':
+      return token ? (
+        <ResponderVerificationGate
+          token={token}
+          onVerified={setVerificationToken}
+        />
+      ) : (
+        <StatusScreen
+          tone="warning"
+          icon={<QrOffIcon />}
+          title="Link not recognized"
+          message="This QR code doesn't match an active MediPass emergency pass."
+        />
+      )
 
     case 'not-found':
       return (
