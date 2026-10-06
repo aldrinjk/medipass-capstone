@@ -30,29 +30,52 @@ public class PublicPassService {
     private final PassTokenService passTokenService;
     private final ClinicalService clinicalService;
     private final PassAccessAuditService auditService;
+    private final ResponderVerificationService responderVerificationService;
 
     public PublicPassService(
             EmergencyPassRepository repository,
             PassTokenService passTokenService,
             ClinicalService clinicalService,
-            PassAccessAuditService auditService
+            PassAccessAuditService auditService,
+            ResponderVerificationService responderVerificationService
     ) {
         this.repository = repository;
         this.passTokenService = passTokenService;
         this.clinicalService = clinicalService;
         this.auditService = auditService;
+        this.responderVerificationService = responderVerificationService;
     }
 
     @Transactional(readOnly = true)
     public PublicPassResponse getPublicSummary(String rawToken) {
-        return getPublicSummary(rawToken, UNKNOWN_DEVICE);
+        return getPublicSummary(rawToken, UNKNOWN_DEVICE, null);
     }
 
     @Transactional(readOnly = true)
     public PublicPassResponse getPublicSummary(String rawToken, String responderDevice) {
+        return getPublicSummary(rawToken, responderDevice, null);
+    }
+
+    @Transactional(readOnly = true)
+    public PublicPassResponse getPublicSummary(
+            String rawToken,
+            String responderDevice,
+            String verificationToken
+    ) {
         String traceCode = newTraceCode();
         String normalizedDevice = normalizeDevice(responderDevice);
-        EmergencyPass emergencyPass = resolveActivePass(rawToken, traceCode, normalizedDevice);
+        EmergencyPass emergencyPass = resolveActivePass(
+                rawToken,
+                traceCode,
+                normalizedDevice
+        );
+
+        ResponderVerificationIdentity identity =
+                responderVerificationService.requireSession(
+                        emergencyPass.getId(),
+                        verificationToken
+                );
+
         Set<ShareCategory> categories = emergencyPass.getCategories();
 
         PublicDemographicsResponse demographics = null;
@@ -82,7 +105,8 @@ public class PublicPassService {
                 emergencyPass.getUserId(),
                 AccessOutcome.SUCCESS,
                 traceCode,
-                normalizedDevice
+                normalizedDevice,
+                identity
         );
 
         return new PublicPassResponse(
@@ -95,7 +119,12 @@ public class PublicPassService {
                 conditions,
                 emergencyContact,
                 traceCode,
-                normalizedDevice
+                normalizedDevice,
+                identity.responderName(),
+                identity.responderRole(),
+                identity.responderOrganization(),
+                identity.phoneLast4(),
+                identity.verificationMethod()
         );
     }
 
@@ -115,7 +144,8 @@ public class PublicPassService {
                     null,
                     AccessOutcome.INVALID,
                     traceCode,
-                    responderDevice
+                    responderDevice,
+                    null
             );
             throw new PublicPassNotFoundException();
         }
@@ -130,7 +160,8 @@ public class PublicPassService {
                     null,
                     AccessOutcome.INVALID,
                     traceCode,
-                    responderDevice
+                    responderDevice,
+                    null
             );
             throw new PublicPassNotFoundException();
         }
@@ -141,7 +172,8 @@ public class PublicPassService {
                     emergencyPass.getUserId(),
                     AccessOutcome.REVOKED,
                     traceCode,
-                    responderDevice
+                    responderDevice,
+                    null
             );
             throw new PublicPassGoneException(PassStatus.REVOKED);
         }
@@ -153,7 +185,8 @@ public class PublicPassService {
                     emergencyPass.getUserId(),
                     AccessOutcome.EXPIRED,
                     traceCode,
-                    responderDevice
+                    responderDevice,
+                    null
             );
             throw new PublicPassGoneException(PassStatus.EXPIRED);
         }
@@ -183,14 +216,39 @@ public class PublicPassService {
             UUID userId,
             AccessOutcome outcome,
             String traceCode,
-            String responderDevice
+            String responderDevice,
+            ResponderVerificationIdentity identity
     ) {
         try {
-            auditService.record(passId, userId, outcome, traceCode, responderDevice);
+            if (identity == null) {
+                auditService.record(
+                        passId,
+                        userId,
+                        outcome,
+                        traceCode,
+                        responderDevice
+                );
+            } else {
+                auditService.record(
+                        passId,
+                        userId,
+                        outcome,
+                        traceCode,
+                        responderDevice,
+                        identity.responderName(),
+                        identity.responderRole(),
+                        identity.responderOrganization(),
+                        identity.phoneLast4(),
+                        identity.verificationMethod() == null
+                                ? null
+                                : identity.verificationMethod().name(),
+                        identity.verificationNote()
+                );
+            }
         } catch (RuntimeException ex) {
             // Emergency/public-pass behavior must remain deterministic even if
-            // the audit store is temporarily unavailable. Never log raw tokens
-            // or clinical data here.
+            // the audit store is temporarily unavailable. Never log raw pass
+            // tokens, OTPs, verification tokens, phone numbers, or clinical data.
             log.warn(
                     "Unable to persist public-pass audit outcome={} passId={} traceCode={}",
                     outcome,
