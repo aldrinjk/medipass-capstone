@@ -47,4 +47,24 @@ class SecurityHardeningTests {
                 .andExpect(header().string("Access-Control-Allow-Origin", "http://localhost:5173"))
                 .andExpect(header().string("Access-Control-Allow-Methods", org.hamcrest.Matchers.containsString("GET")));
     }
+
+    @Test
+    void responderVerificationHeaderIsAllowedByCorsPreflight() throws Exception {
+        mockMvc.perform(options("/api/v1/public/passes/demo-token")
+                        .header("Origin", "http://localhost:5173")
+                        .header("Access-Control-Request-Method", "GET")
+                        .header(
+                                "Access-Control-Request-Headers",
+                                "X-MediPass-Verification"
+                        ))
+                .andExpect(status().isOk())
+                .andExpect(header().string(
+                        "Access-Control-Allow-Origin",
+                        "http://localhost:5173"
+                ))
+                .andExpect(header().string(
+                        "Access-Control-Allow-Headers",
+                        org.hamcrest.Matchers.containsString("X-MediPass-Verification")
+                ));
+    }
 }
