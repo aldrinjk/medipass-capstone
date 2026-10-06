@@ -100,9 +100,13 @@ public class ResponderVerificationService {
 
         String rawSessionToken = passTokenService.generateToken();
         Instant sessionExpiry = sessionExpiry(pass);
+        String verificationNote = "DEVELOPMENT".equalsIgnoreCase(otpProvider.deliveryMode())
+                ? "Development OTP simulation; no SMS was sent."
+                : null;
         challenge.activatePhoneVerification(
                 passTokenService.hashToken(rawSessionToken),
-                sessionExpiry
+                sessionExpiry,
+                verificationNote
         );
         challengeRepository.saveAndFlush(challenge);
 
