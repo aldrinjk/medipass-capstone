@@ -89,6 +89,12 @@ public class AdminService {
                 log.getCorrelationId(),
                 log.getTraceCode(),
                 log.getResponderDevice(),
+                log.getResponderName(),
+                log.getResponderRole(),
+                log.getResponderOrganization(),
+                log.getResponderPhoneLast4(),
+                log.getVerificationMethod(),
+                log.getVerificationNote(),
                 log.getAccessedAt()
         );
     }
