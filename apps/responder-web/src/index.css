@@ -287,28 +287,27 @@ body {
 
 .summary-watermark {
   position: fixed;
-  inset: -8%;
+  inset: 0;
   z-index: 1;
   pointer-events: none;
-  display: grid;
-  grid-template-columns: 1fr;
-  align-content: space-around;
-  justify-items: center;
-  gap: 5rem;
-  transform: rotate(-17deg);
-  opacity: 0.075;
-  color: #0b1220;
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.055em;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-evenly;
+  align-items: center;
+  padding: 1.5rem 0.75rem;
+  overflow: hidden;
   user-select: none;
 }
 
 .summary-watermark-item {
-  width: 92%;
-  max-width: 540px;
+  width: min(92vw, 560px);
   text-align: center;
-  line-height: 1.45;
+  line-height: 1.38;
+  transform: rotate(-9deg);
+  color: rgba(11, 18, 32, 0.14);
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.035em;
 }
 
 .summary-watermark-item span {
@@ -317,11 +316,23 @@ body {
   overflow-wrap: anywhere;
 }
 
+.summary-watermark-item span + span {
+  margin-top: 0.08rem;
+}
+
 @media (min-width: 760px) {
   .summary-watermark {
+    display: grid;
     grid-template-columns: repeat(2, minmax(280px, 1fr));
-    gap: 6rem 3rem;
-    font-size: 0.78rem;
+    align-content: space-evenly;
+    gap: 5rem 3rem;
+    padding: 2rem;
+  }
+
+  .summary-watermark-item {
+    width: 100%;
+    max-width: 520px;
+    font-size: 0.82rem;
   }
 }
 
