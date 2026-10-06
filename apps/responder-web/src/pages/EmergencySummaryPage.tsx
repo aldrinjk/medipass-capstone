@@ -9,11 +9,18 @@ import { usePublicPass } from '../hooks/usePublicPass'
 export function EmergencySummaryPage() {
   const { token } = useParams<{ token: string }>()
   const [verificationToken, setVerificationToken] = useState<string>()
+  const [verifiedPhone, setVerifiedPhone] = useState<string>()
   const state = usePublicPass(token, verificationToken)
 
   useEffect(() => {
     setVerificationToken(undefined)
+    setVerifiedPhone(undefined)
   }, [token])
+
+  const handleVerified = (nextVerificationToken: string, phone?: string) => {
+    setVerificationToken(nextVerificationToken)
+    setVerifiedPhone(phone)
+  }
 
   if (state.status === 'loading') {
     return <LoadingScreen />
@@ -21,13 +28,18 @@ export function EmergencySummaryPage() {
 
   switch (state.kind) {
     case 'success':
-      return <EmergencySummary summary={state.data} />
+      return (
+        <EmergencySummary
+          summary={state.data}
+          verifiedPhoneForWatermark={verifiedPhone}
+        />
+      )
 
     case 'verification-required':
       return token ? (
         <ResponderVerificationGate
           token={token}
-          onVerified={setVerificationToken}
+          onVerified={handleVerified}
         />
       ) : (
         <StatusScreen
