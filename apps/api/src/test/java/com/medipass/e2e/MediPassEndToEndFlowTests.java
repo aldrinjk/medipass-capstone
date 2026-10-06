@@ -181,15 +181,41 @@ class MediPassEndToEndFlowTests {
                 .andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].passId").value(passId));
 
-        // 7-8. QR scan -> anonymous public access, filtered to the allowed categories
-        mockMvc.perform(get("/api/v1/public/passes/{token}", rawToken))
+        // 7. A responder must identify themselves before clinical data is returned.
+        MvcResult responderSession = mockMvc.perform(post(
+                                "/api/v1/public/passes/{token}/verification/emergency-override",
+                                rawToken
+                        )
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name":"E2E Paramedic",
+                                  "role":"Paramedic",
+                                  "organization":"Demo EMS",
+                                  "reason":"Automated emergency-flow test"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.verificationMethod").value("EMERGENCY_OVERRIDE"))
+                .andReturn();
+
+        String verificationToken = objectMapper
+                .readTree(responderSession.getResponse().getContentAsString())
+                .get("verificationToken")
+                .asText();
+
+        // 8. Responder access is filtered to the patient's allowed categories.
+        mockMvc.perform(get("/api/v1/public/passes/{token}", rawToken)
+                        .header("X-MediPass-Verification", verificationToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.categories", org.hamcrest.Matchers.containsInAnyOrder(
                         "ALLERGIES", "EMERGENCY_CONTACT")))
                 .andExpect(jsonPath("$.allergies[0].substance").value("Penicillin"))
                 .andExpect(jsonPath("$.emergencyContact.name").value("Alex Contact"))
                 .andExpect(jsonPath("$.medications").doesNotExist())
-                .andExpect(jsonPath("$.conditions").doesNotExist());
+                .andExpect(jsonPath("$.conditions").doesNotExist())
+                .andExpect(jsonPath("$.responderName").value("E2E Paramedic"))
+                .andExpect(jsonPath("$.responderVerificationMethod").value("EMERGENCY_OVERRIDE"));
 
         // 9. Access gets logged
         mockMvc.perform(get("/api/v1/patients/me/access-logs").header("Authorization", bearer))
