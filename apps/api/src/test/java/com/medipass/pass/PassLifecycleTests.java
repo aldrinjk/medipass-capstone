@@ -169,7 +169,8 @@ class PassLifecycleTests {
                 .andExpect(jsonPath("$.code").value("PUBLIC_PASS_NOT_FOUND"));
 
         mockMvc.perform(get("/api/v1/public/passes/{token}", newRawToken))
-                .andExpect(status().isOk());
+                .andExpect(status().isPreconditionRequired())
+                .andExpect(jsonPath("$.code").value("RESPONDER_VERIFICATION_REQUIRED"));
     }
 
     @Test
