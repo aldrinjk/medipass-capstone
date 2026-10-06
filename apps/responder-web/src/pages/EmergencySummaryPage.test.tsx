@@ -40,6 +40,11 @@ describe('EmergencySummaryPage', () => {
       emergencyContact: null,
       accessTraceCode: 'MP-TESTTRACE000001',
       responderDevice: 'iPhone · Safari',
+      responderName: 'Demo Responder',
+      responderRole: 'Paramedic',
+      responderOrganization: 'Demo EMS',
+      responderPhoneLast4: '0199',
+      responderVerificationMethod: 'PHONE_OTP',
     }
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(200, summary)))
 
@@ -49,6 +54,26 @@ describe('EmergencySummaryPage', () => {
     expect(screen.queryByText('Medications')).not.toBeInTheDocument()
     expect(screen.queryByText('Conditions')).not.toBeInTheDocument()
     expect(screen.queryByText('Emergency contact')).not.toBeInTheDocument()
+  })
+
+  it('shows the responder verification gate before clinical information is released', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        jsonResponse(428, {
+          timestamp: '2030-01-01T00:00:00Z',
+          status: 428,
+          code: 'RESPONDER_VERIFICATION_REQUIRED',
+          message: 'Responder verification is required.',
+          path: '/api/v1/public/passes/good-token',
+        }),
+      ),
+    )
+
+    renderAtToken('good-token')
+
+    expect(await screen.findByText('Verify responder access')).toBeInTheDocument()
+    expect(screen.queryByText('Peanuts')).not.toBeInTheDocument()
   })
 
   it('shows a generic invalid-link screen for a 404', async () => {
@@ -129,6 +154,11 @@ describe('EmergencySummaryPage', () => {
       emergencyContact: null,
       accessTraceCode: 'MP-TESTTRACE000001',
       responderDevice: 'iPhone · Safari',
+      responderName: 'Demo Responder',
+      responderRole: 'Paramedic',
+      responderOrganization: 'Demo EMS',
+      responderPhoneLast4: '0199',
+      responderVerificationMethod: 'PHONE_OTP',
     }
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(200, summary)))
 
