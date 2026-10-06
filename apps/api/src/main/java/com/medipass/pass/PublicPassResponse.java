@@ -28,6 +28,7 @@ public record PublicPassResponse(
         String responderRole,
         String responderOrganization,
         String responderPhoneLast4,
-        ResponderVerificationMethod responderVerificationMethod
+        ResponderVerificationMethod responderVerificationMethod,
+        String responderVerificationNote
 ) {
 }
