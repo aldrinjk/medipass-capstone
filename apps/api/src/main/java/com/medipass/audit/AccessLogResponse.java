@@ -9,6 +9,12 @@ public record AccessLogResponse(
         AccessOutcome outcome,
         String traceCode,
         String responderDevice,
+        String responderName,
+        String responderRole,
+        String responderOrganization,
+        String responderPhoneLast4,
+        String verificationMethod,
+        String verificationNote,
         Instant accessedAt
 ) {
 }
