@@ -299,6 +299,10 @@ components:
         responderOrganization: {type: string, nullable: true}
         responderPhoneLast4: {type: string, nullable: true, minLength: 4, maxLength: 4}
         responderVerificationMethod: {$ref: '#/components/schemas/ResponderVerificationMethod'}
+        responderVerificationNote:
+          type: string
+          nullable: true
+          description: Assurance note such as development OTP simulation; absent for normal production SMS verification.
     AccessLogResponse:
       type: object
       required: [id, outcome, accessedAt]
