@@ -1,27 +1,44 @@
 import { useEffect, useState, type SyntheticEvent } from 'react'
-import type { PublicPassSummary } from '../api/types'
+import type { PublicPassSummary, ResponderVerificationMethod } from '../api/types'
 import { formatAge, formatExpiry } from '../utils/formatters'
 
 interface EmergencySummaryProps {
   summary: PublicPassSummary
 }
 
-/**
- * Renders exactly the fields the backend returned -- nothing more.
- * A field/section is omitted whenever the corresponding data is
- * null/empty; this component never fetches or infers hidden categories
- * (see docs/team-handoffs section 6.5).
- *
- * Browsers cannot prevent OS-level screenshots or screen recording.
- * This view therefore uses best-effort privacy controls: a persistent
- * confidential watermark and an obscuring shield whenever the page loses
- * focus or is backgrounded.
- */
+function verificationLabel(method: ResponderVerificationMethod) {
+  switch (method) {
+    case 'PHONE_OTP':
+      return 'PHONE VERIFIED'
+    case 'EMERGENCY_OVERRIDE':
+      return 'UNVERIFIED EMERGENCY ACCESS'
+    case 'AADHAAR_OFFLINE':
+      return 'IDENTITY VERIFIED'
+    case 'ORGANIZATION_SSO':
+      return 'ORGANIZATION VERIFIED'
+    case 'PASSKEY':
+      return 'PASSKEY VERIFIED'
+    default:
+      return 'RESPONDER ACCESS'
+  }
+}
+
 export function EmergencySummary({ summary }: EmergencySummaryProps) {
   const { demographics, allergies, medications, conditions, emergencyContact } = summary
   const age = demographics ? formatAge(demographics.birthDate) : null
   const [isObscured, setIsObscured] = useState(false)
-  const watermarkLabel = `MEDIPASS · ${summary.accessTraceCode} · ${summary.responderDevice}`
+
+  const verification = verificationLabel(summary.responderVerificationMethod)
+  const responderIdentity = [
+    summary.responderName,
+    summary.responderRole,
+    summary.responderOrganization,
+  ].filter(Boolean).join(' · ')
+  const phoneLabel = summary.responderPhoneLast4
+    ? `••••${summary.responderPhoneLast4}`
+    : null
+  const watermarkPrimary = `MEDIPASS · ${summary.responderName} · ${verification}`
+  const watermarkSecondary = [phoneLabel, summary.accessTraceCode].filter(Boolean).join(' · ')
 
   useEffect(() => {
     const updateVisibility = () => {
@@ -53,8 +70,11 @@ export function EmergencySummary({ summary }: EmergencySummaryProps) {
       onContextMenu={blockDataExtraction}
     >
       <div className="summary-watermark" aria-hidden="true">
-        {Array.from({ length: 12 }, (_, index) => (
-          <span key={index}>{watermarkLabel}</span>
+        {Array.from({ length: 6 }, (_, index) => (
+          <div className="summary-watermark-item" key={index}>
+            <span>{watermarkPrimary}</span>
+            <span>{watermarkSecondary}</span>
+          </div>
         ))}
       </div>
 
@@ -69,6 +89,14 @@ export function EmergencySummary({ summary }: EmergencySummaryProps) {
         <div className="privacy-banner" role="note">
           <strong>Confidential emergency information</strong>
           <span>Authorized clinical use only · Do not capture or share</span>
+          <span>Responder: {responderIdentity}</span>
+          <span>
+            {summary.responderVerificationMethod === 'PHONE_OTP'
+              ? `Phone verified ${phoneLabel ?? ''} · Name supplied by responder`
+              : summary.responderVerificationMethod === 'EMERGENCY_OVERRIDE'
+                ? 'Unverified emergency override · Identity self-declared'
+                : verification}
+          </span>
           <span>Trace: {summary.accessTraceCode} · Device: {summary.responderDevice}</span>
         </div>
 
