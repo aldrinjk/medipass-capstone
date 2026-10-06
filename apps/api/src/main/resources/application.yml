@@ -47,3 +47,12 @@ medipass:
     refresh-days: ${JWT_REFRESH_DAYS:7}
   fhir:
     base-url: ${HAPI_FHIR_BASE_URL:http://localhost:8081/fhir}
+  responder-verification:
+    provider: ${RESPONDER_OTP_PROVIDER:dev}
+    demo-code: ${RESPONDER_DEMO_OTP:123456}
+    challenge-minutes: ${RESPONDER_OTP_CHALLENGE_MINUTES:5}
+    session-minutes: ${RESPONDER_SESSION_MINUTES:15}
+    twilio:
+      account-sid: ${TWILIO_ACCOUNT_SID:}
+      auth-token: ${TWILIO_AUTH_TOKEN:}
+      service-sid: ${TWILIO_VERIFY_SERVICE_SID:}
