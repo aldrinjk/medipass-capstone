@@ -280,7 +280,9 @@ export default function PassesScreen() {
                     <Text style={styles.detailLabel}>Verification</Text>
                     <Text style={styles.detailValue}>
                       {selectedAccessLog.verificationMethod === 'PHONE_OTP'
-                        ? `Phone verified${selectedAccessLog.responderPhoneLast4 ? ` · mobile ending ${selectedAccessLog.responderPhoneLast4}` : ''}. Name is self-declared.`
+                        ? selectedAccessLog.verificationNote?.startsWith('Development OTP')
+                          ? `Development OTP simulation${selectedAccessLog.responderPhoneLast4 ? ` · mobile ending ${selectedAccessLog.responderPhoneLast4}` : ''}. No SMS was sent. Name is self-declared.`
+                          : `Phone verified${selectedAccessLog.responderPhoneLast4 ? ` · mobile ending ${selectedAccessLog.responderPhoneLast4}` : ''}. Name is self-declared.`
                         : selectedAccessLog.verificationMethod === 'EMERGENCY_OVERRIDE'
                           ? 'Unverified emergency override. Identity is self-declared.'
                           : selectedAccessLog.verificationMethod?.replaceAll('_', ' ') || 'Unavailable for older access records'}
