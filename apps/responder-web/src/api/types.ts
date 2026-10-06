@@ -67,6 +67,7 @@ export interface PublicPassSummary {
   responderOrganization: string | null
   responderPhoneLast4: string | null
   responderVerificationMethod: ResponderVerificationMethod
+  responderVerificationNote?: string | null
 }
 
 export interface ResponderVerificationStartResponse {
