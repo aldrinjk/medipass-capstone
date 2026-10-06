@@ -6,11 +6,13 @@ export type PublicPassState =
   | ({ status: 'loaded' } & PublicPassResult)
 
 /**
- * Loads the public emergency summary for a token exactly once per token
- * change. The token itself is only ever used as a fetch path segment --
- * it is never stored (no localStorage/sessionStorage) and never logged.
+ * Loads the public pass once per scanned token / short-lived verification
+ * session. Neither token is persisted in browser storage.
  */
-export function usePublicPass(token: string | undefined): PublicPassState {
+export function usePublicPass(
+  token: string | undefined,
+  verificationToken?: string,
+): PublicPassState {
   const [state, setState] = useState<PublicPassState>({ status: 'loading' })
 
   useEffect(() => {
@@ -23,7 +25,7 @@ export function usePublicPass(token: string | undefined): PublicPassState {
 
     setState({ status: 'loading' })
 
-    fetchPublicPass(token).then((result) => {
+    fetchPublicPass(token, verificationToken).then((result) => {
       if (!cancelled) {
         setState({ status: 'loaded', ...result })
       }
@@ -32,7 +34,7 @@ export function usePublicPass(token: string | undefined): PublicPassState {
     return () => {
       cancelled = true
     }
-  }, [token])
+  }, [token, verificationToken])
 
   return state
 }
