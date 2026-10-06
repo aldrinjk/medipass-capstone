@@ -16,7 +16,6 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -36,6 +35,9 @@ class PublicPassAuditFailureTests {
     @Mock
     private PassAccessAuditService auditService;
 
+    @Mock
+    private ResponderVerificationService verificationService;
+
     @Test
     void successfulSummaryStillReturnsWhenAuditStoreFails() {
         UUID passId = UUID.randomUUID();
@@ -49,27 +51,49 @@ class PublicPassAuditFailureTests {
         when(pass.getStatus()).thenReturn(PassStatus.ACTIVE);
         when(pass.getExpiresAt()).thenReturn(Instant.now().plusSeconds(3600));
         when(pass.getCategories()).thenReturn(Collections.emptySet());
+        when(verificationService.requireSession(passId, "verification-token"))
+                .thenReturn(new ResponderVerificationIdentity(
+                        "Test Responder",
+                        "Paramedic",
+                        "Demo EMS",
+                        "0199",
+                        ResponderVerificationMethod.PHONE_OTP,
+                        null
+                ));
+
         doThrow(new RuntimeException("audit unavailable"))
                 .when(auditService)
                 .record(
-                        org.mockito.ArgumentMatchers.eq(passId),
-                        org.mockito.ArgumentMatchers.eq(userId),
-                        org.mockito.ArgumentMatchers.eq(AccessOutcome.SUCCESS),
-                        anyString(),
-                        anyString()
+                        any(),
+                        any(),
+                        any(),
+                        any(),
+                        any(),
+                        any(),
+                        any(),
+                        any(),
+                        any(),
+                        any(),
+                        any()
                 );
 
         PublicPassService service = new PublicPassService(
                 repository,
                 passTokenService,
                 clinicalService,
-                auditService
+                auditService,
+                verificationService
         );
 
-        PublicPassResponse response = service.getPublicSummary("raw-token");
+        PublicPassResponse response = service.getPublicSummary(
+                "raw-token",
+                "iPhone · Safari",
+                "verification-token"
+        );
 
         assertThat(response.passId()).isEqualTo(passId);
         assertThat(response.categories()).isEmpty();
+        assertThat(response.responderName()).isEqualTo("Test Responder");
     }
 
     @Test
@@ -78,19 +102,14 @@ class PublicPassAuditFailureTests {
         when(repository.findByTokenHash("missing-hash")).thenReturn(Optional.empty());
         doThrow(new RuntimeException("audit unavailable"))
                 .when(auditService)
-                .record(
-                        org.mockito.ArgumentMatchers.isNull(),
-                        org.mockito.ArgumentMatchers.isNull(),
-                        org.mockito.ArgumentMatchers.eq(AccessOutcome.INVALID),
-                        anyString(),
-                        anyString()
-                );
+                .record(any(), any(), any(), any(), any());
 
         PublicPassService service = new PublicPassService(
                 repository,
                 passTokenService,
                 clinicalService,
-                auditService
+                auditService,
+                verificationService
         );
 
         assertThatThrownBy(() -> service.getPublicSummary("invalid"))
