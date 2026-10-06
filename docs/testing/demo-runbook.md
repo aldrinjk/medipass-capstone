@@ -74,6 +74,9 @@ SMS credentials. For real SMS, configure `RESPONDER_OTP_PROVIDER=twilio` plus
 
 A phone OTP proves control of the supplied number at that moment. It does not,
 by itself, prove the responder's self-declared name, role, or organization.
+The full verified phone number is kept only in the responder page's in-memory
+session so it can appear in the visible watermark; the patient audit record
+still stores only the last four digits.
 
 ## 4. Start the Expo patient app
 
@@ -127,7 +130,8 @@ Perform the following in order:
     audit history with the same responder metadata, verification method, device,
     and trace code.
 15. Take a screenshot of the responder view and confirm its watermark is legible
-    and contains responder accountability data plus the same trace code. The
+    and, after phone verification, contains the responder's full verified phone
+    number plus responder accountability data and the same trace code. The
     browser cannot report that a screenshot was taken; the watermark supports
     later forensic correlation if a captured image exists.
 16. Revoke the pass.
@@ -190,7 +194,7 @@ At minimum verify:
 - phone-OTP access records responder name/role/organization, masked last four phone digits, device, and trace code
 - phone OTP is described accurately as proof of phone control, not legal-name verification
 - emergency override is clearly labelled unverified and records the stated reason
-- responder watermark contains the same responder accountability metadata and trace code as the patient audit log
+- responder watermark contains the responder's full verified phone number for that in-memory session, plus responder accountability metadata and the same trace code as the patient audit log
 - watermark copies remain spaced and readable on a narrow mobile viewport rather than overlapping
 - browser screenshot limitation is documented: capture cannot be detected or
   universally blocked, but captured responder views are watermarked for
