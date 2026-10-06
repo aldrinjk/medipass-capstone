@@ -59,6 +59,22 @@ For phone-to-phone testing, set `PUBLIC_RESPONDER_WEB_BASE_URL` on the backend
 to a URL reachable by the scanning phone. The default `localhost:5173` works
 only when the responder browser is on the same computer.
 
+Responder verification defaults to the development provider:
+
+```text
+RESPONDER_OTP_PROVIDER=dev
+RESPONDER_DEMO_OTP=123456
+```
+
+Development mode **does not send a real SMS**. The verification page explicitly
+shows the test code so the complete flow can be demonstrated without external
+SMS credentials. For real SMS, configure `RESPONDER_OTP_PROVIDER=twilio` plus
+`TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, and
+`TWILIO_VERIFY_SERVICE_SID` privately.
+
+A phone OTP proves control of the supplied number at that moment. It does not,
+by itself, prove the responder's self-declared name, role, or organization.
+
 ## 4. Start the Expo patient app
 
 In a third terminal:
@@ -98,20 +114,31 @@ Perform the following in order:
 7. Create an emergency pass with a short but sufficient expiry window.
 8. Confirm the patient app displays a QR code.
 9. Scan the QR with a second phone's normal camera.
-10. Confirm the React responder page opens without login or MediPass installed.
-11. Confirm only categories selected in the pass are visible.
-12. Return to the patient app and confirm the successful access appears in the
-    access audit history.
-13. Confirm that the access entry shows a server-generated trace code and a
-    browser-visible responder device label. The same values must appear in the
-    responder watermark/banner so a captured image can be correlated back to
-    the access record.
-14. Revoke the pass.
-15. Scan/reload the same QR again.
-16. Confirm the responder receives the revoked/410 experience and no clinical
+10. Confirm the responder page opens without requiring a MediPass patient
+    account or installed responder app, but **does not show clinical data yet**.
+11. Complete the responder verification gate using fictional responder details.
+    In development mode, use the clearly labelled test OTP shown by the page.
+12. Confirm the emergency summary opens only after verification and that only
+    categories selected in the pass are visible.
+13. Confirm the banner states the responder name/role/organization, verification
+    method, masked phone digits when applicable, device label, and trace code.
+    For PHONE_OTP, the phone is verified while the name remains self-declared.
+14. Return to the patient app and confirm the successful access appears in the
+    audit history with the same responder metadata, verification method, device,
+    and trace code.
+15. Take a screenshot of the responder view and confirm its watermark is legible
+    and contains responder accountability data plus the same trace code. The
+    browser cannot report that a screenshot was taken; the watermark supports
+    later forensic correlation if a captured image exists.
+16. Revoke the pass.
+17. Scan/reload the same QR again.
+18. Confirm the responder receives the revoked/410 experience and no clinical
     summary is shown.
-17. Optionally rotate a fresh active pass and confirm the previous token no
+19. Optionally rotate a fresh active pass and confirm the previous token no
     longer works.
+20. Separately test **Emergency access without phone verification**. Confirm the
+    view and patient audit log clearly label it as an unverified emergency
+    override and record the responder-supplied reason.
 
 ## 6. FHIR verification
 
@@ -159,7 +186,12 @@ At minimum verify:
 - rotated token
 - temporary network failure/retry
 - no hidden ShareCategory appears in the responder output
-- responder watermark contains the same trace code/device label as the patient audit log
+- clinical information is not returned before responder verification or an explicit emergency override
+- phone-OTP access records responder name/role/organization, masked last four phone digits, device, and trace code
+- phone OTP is described accurately as proof of phone control, not legal-name verification
+- emergency override is clearly labelled unverified and records the stated reason
+- responder watermark contains the same responder accountability metadata and trace code as the patient audit log
+- watermark copies remain spaced and readable on a narrow mobile viewport rather than overlapping
 - browser screenshot limitation is documented: capture cannot be detected or
   universally blocked, but captured responder views are watermarked for
   correlation to an access record
