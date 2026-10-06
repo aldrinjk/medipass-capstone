@@ -216,7 +216,10 @@ class PublicPassTests {
                 .andExpect(jsonPath("$.responderRole").value("Paramedic"))
                 .andExpect(jsonPath("$.responderOrganization").value("Demo EMS"))
                 .andExpect(jsonPath("$.responderPhoneLast4").value("0199"))
-                .andExpect(jsonPath("$.responderVerificationMethod").value("PHONE_OTP"));
+                .andExpect(jsonPath("$.responderVerificationMethod").value("PHONE_OTP"))
+                .andExpect(jsonPath("$.responderVerificationNote").value(
+                        "Development OTP simulation; no SMS was sent."
+                ));
 
         PassAccessLog log = onlyAuditLog();
         assertEquals(AccessOutcome.SUCCESS, log.getOutcome());
@@ -229,6 +232,10 @@ class PublicPassTests {
         assertEquals("Demo EMS", log.getResponderOrganization());
         assertEquals("0199", log.getResponderPhoneLast4());
         assertEquals("PHONE_OTP", log.getVerificationMethod());
+        assertEquals(
+                "Development OTP simulation; no SMS was sent.",
+                log.getVerificationNote()
+        );
         assertNotNull(log.getAccessedAt());
     }
 
