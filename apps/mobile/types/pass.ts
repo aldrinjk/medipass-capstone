@@ -34,12 +34,25 @@ export interface CreatePassRequest {
 
 export type AccessOutcome = 'SUCCESS' | 'EXPIRED' | 'REVOKED' | 'INVALID';
 
+export type ResponderVerificationMethod =
+  | 'PHONE_OTP'
+  | 'EMERGENCY_OVERRIDE'
+  | 'AADHAAR_OFFLINE'
+  | 'ORGANIZATION_SSO'
+  | 'PASSKEY';
+
 export interface AccessLogResponse {
   id: string;
   passId: string;
   outcome: AccessOutcome;
   traceCode?: string | null;
   responderDevice?: string | null;
+  responderName?: string | null;
+  responderRole?: string | null;
+  responderOrganization?: string | null;
+  responderPhoneLast4?: string | null;
+  verificationMethod?: ResponderVerificationMethod | null;
+  verificationNote?: string | null;
   accessedAt: string;
 }
 
