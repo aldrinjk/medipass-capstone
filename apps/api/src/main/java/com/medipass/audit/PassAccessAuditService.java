@@ -23,7 +23,13 @@ public class PassAccessAuditService {
             UUID userId,
             AccessOutcome outcome,
             String traceCode,
-            String responderDevice
+            String responderDevice,
+            String responderName,
+            String responderRole,
+            String responderOrganization,
+            String responderPhoneLast4,
+            String verificationMethod,
+            String verificationNote
     ) {
         String correlationId = MDC.get(CorrelationIdFilter.MDC_KEY);
         repository.save(new PassAccessLog(
@@ -32,8 +38,37 @@ public class PassAccessAuditService {
                 outcome,
                 correlationId,
                 traceCode,
-                responderDevice
+                responderDevice,
+                responderName,
+                responderRole,
+                responderOrganization,
+                responderPhoneLast4,
+                verificationMethod,
+                verificationNote
         ));
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void record(
+            UUID passId,
+            UUID userId,
+            AccessOutcome outcome,
+            String traceCode,
+            String responderDevice
+    ) {
+        record(
+                passId,
+                userId,
+                outcome,
+                traceCode,
+                responderDevice,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+        );
     }
 
     /**
