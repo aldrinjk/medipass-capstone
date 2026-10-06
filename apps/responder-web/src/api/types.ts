@@ -1,6 +1,6 @@
 /**
  * Mirrors docs/api/openapi.yaml and apps/api's pass/patient DTOs exactly.
- * Do not rename these fields locally -- they must match the frozen API contract.
+ * Do not rename these fields locally -- they must match the API contract.
  */
 
 export type ShareCategory =
@@ -10,9 +10,16 @@ export type ShareCategory =
   | 'CONDITIONS'
   | 'EMERGENCY_CONTACT'
 
+export type ResponderVerificationMethod =
+  | 'PHONE_OTP'
+  | 'EMERGENCY_OVERRIDE'
+  | 'AADHAAR_OFFLINE'
+  | 'ORGANIZATION_SSO'
+  | 'PASSKEY'
+
 export interface Demographics {
   fullName: string | null
-  birthDate: string | null // ISO date (yyyy-MM-dd)
+  birthDate: string | null
   gender: string | null
   phone: string | null
 }
@@ -44,10 +51,9 @@ export interface EmergencyContact {
   phone: string | null
 }
 
-/** GET /api/v1/public/passes/{token} 200 response body. */
 export interface PublicPassSummary {
   passId: string
-  expiresAt: string // ISO instant
+  expiresAt: string
   categories: ShareCategory[]
   demographics: Demographics | null
   allergies: Allergy[] | null
@@ -56,9 +62,29 @@ export interface PublicPassSummary {
   emergencyContact: EmergencyContact | null
   accessTraceCode: string
   responderDevice: string
+  responderName: string
+  responderRole: string | null
+  responderOrganization: string | null
+  responderPhoneLast4: string | null
+  responderVerificationMethod: ResponderVerificationMethod
 }
 
-/** Shared API error envelope returned by the Spring Boot backend. */
+export interface ResponderVerificationStartResponse {
+  challengeId: string
+  maskedPhone: string
+  expiresAt: string
+  deliveryMode: 'DEVELOPMENT' | 'SMS' | string
+  developmentCode?: string | null
+}
+
+export interface ResponderVerificationSessionResponse {
+  verificationToken: string
+  verificationMethod: ResponderVerificationMethod
+  responderName: string
+  maskedPhone?: string | null
+  expiresAt: string
+}
+
 export interface ApiErrorBody {
   timestamp: string
   status: number
