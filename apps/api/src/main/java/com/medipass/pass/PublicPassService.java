@@ -124,7 +124,8 @@ public class PublicPassService {
                 identity.responderRole(),
                 identity.responderOrganization(),
                 identity.phoneLast4(),
-                identity.verificationMethod()
+                identity.verificationMethod(),
+                identity.verificationNote()
         );
     }
 
