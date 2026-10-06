@@ -1,5 +1,7 @@
 package com.medipass.pass;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.medipass.audit.AccessOutcome;
 import com.medipass.audit.PassAccessLog;
 import com.medipass.audit.PassAccessLogRepository;
@@ -14,9 +16,11 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -25,10 +29,12 @@ import java.util.Set;
 import java.util.UUID;
 
 import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -42,7 +48,13 @@ class PublicPassTests {
     private MockMvc mockMvc;
 
     @Autowired
+    private ObjectMapper objectMapper;
+
+    @Autowired
     private EmergencyPassRepository emergencyPassRepository;
+
+    @Autowired
+    private ResponderVerificationChallengeRepository verificationChallengeRepository;
 
     @Autowired
     private UserRepository userRepository;
@@ -64,6 +76,7 @@ class PublicPassTests {
     @BeforeEach
     void setUp() {
         passAccessLogRepository.deleteAll();
+        verificationChallengeRepository.deleteAll();
         emergencyPassRepository.deleteAll();
         userRepository.deleteAll();
 
@@ -72,7 +85,22 @@ class PublicPassTests {
     }
 
     @Test
-    void validPublicPassNeedsNoLoginAndReturnsOnlySelectedCategories() throws Exception {
+    void activePublicPassRequiresResponderVerificationBeforeClinicalData() throws Exception {
+        String rawToken = "verification-required-token";
+        savePass(
+                rawToken,
+                Instant.now().plus(2, ChronoUnit.DAYS),
+                Set.of(ShareCategory.ALLERGIES)
+        );
+
+        mockMvc.perform(get("/api/v1/public/passes/{token}", rawToken))
+                .andExpect(status().isPreconditionRequired())
+                .andExpect(jsonPath("$.code").value("RESPONDER_VERIFICATION_REQUIRED"))
+                .andExpect(jsonPath("$.allergies").doesNotExist());
+    }
+
+    @Test
+    void validPublicPassNeedsNoPatientLoginAndReturnsOnlySelectedCategories() throws Exception {
         clinicalService.createAllergy(
                 userId,
                 new AllergyRequest("Peanuts", "Hives", "Severe")
@@ -88,8 +116,10 @@ class PublicPassTests {
                 Instant.now().plus(2, ChronoUnit.DAYS),
                 Set.of(ShareCategory.ALLERGIES)
         );
+        String verificationToken = emergencyOverrideToken(rawToken);
 
-        mockMvc.perform(get("/api/v1/public/passes/{token}", rawToken))
+        mockMvc.perform(get("/api/v1/public/passes/{token}", rawToken)
+                        .header("X-MediPass-Verification", verificationToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.categories", containsInAnyOrder("ALLERGIES")))
                 .andExpect(jsonPath("$.allergies[0].substance").value("Peanuts"))
@@ -97,6 +127,8 @@ class PublicPassTests {
                 .andExpect(jsonPath("$.medications").doesNotExist())
                 .andExpect(jsonPath("$.conditions").doesNotExist())
                 .andExpect(jsonPath("$.emergencyContact").doesNotExist())
+                .andExpect(jsonPath("$.responderName").value("Emergency Responder"))
+                .andExpect(jsonPath("$.responderVerificationMethod").value("EMERGENCY_OVERRIDE"))
                 .andExpect(jsonPath("$.tokenHash").doesNotExist())
                 .andExpect(jsonPath("$.userId").doesNotExist());
     }
@@ -109,8 +141,10 @@ class PublicPassTests {
                 Instant.now().plus(2, ChronoUnit.DAYS),
                 Set.of(ShareCategory.DEMOGRAPHICS)
         );
+        String verificationToken = emergencyOverrideToken(rawToken);
 
-        mockMvc.perform(get("/api/v1/public/passes/{token}", rawToken))
+        mockMvc.perform(get("/api/v1/public/passes/{token}", rawToken)
+                        .header("X-MediPass-Verification", verificationToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.demographics.fullName").exists())
                 .andExpect(jsonPath("$.demographics.id").doesNotExist())
@@ -158,7 +192,7 @@ class PublicPassTests {
     }
 
     @Test
-    void successfulPublicAccessCreatesSuccessAuditLog() throws Exception {
+    void phoneOtpVerificationUnlocksSummaryAndCreatesIdentityRichAuditLog() throws Exception {
         String rawToken = "audit-success-token";
         EmergencyPass saved = savePass(
                 rawToken,
@@ -166,15 +200,23 @@ class PublicPassTests {
                 Set.of(ShareCategory.ALLERGIES)
         );
 
+        String verificationToken = phoneVerificationToken(rawToken);
+
         mockMvc.perform(get("/api/v1/public/passes/{token}", rawToken)
+                        .header("X-MediPass-Verification", verificationToken)
                         .header(
                                 "User-Agent",
                                 "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) "
                                         + "AppleWebKit/605.1.15 Version/18.0 Mobile/15E148 Safari/604.1"
                         ))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.accessTraceCode").value(org.hamcrest.Matchers.startsWith("MP-")))
-                .andExpect(jsonPath("$.responderDevice").value("iPhone · Safari"));
+                .andExpect(jsonPath("$.accessTraceCode").value(startsWith("MP-")))
+                .andExpect(jsonPath("$.responderDevice").value("iPhone · Safari"))
+                .andExpect(jsonPath("$.responderName").value("Test Responder"))
+                .andExpect(jsonPath("$.responderRole").value("Paramedic"))
+                .andExpect(jsonPath("$.responderOrganization").value("Demo EMS"))
+                .andExpect(jsonPath("$.responderPhoneLast4").value("0199"))
+                .andExpect(jsonPath("$.responderVerificationMethod").value("PHONE_OTP"));
 
         PassAccessLog log = onlyAuditLog();
         assertEquals(AccessOutcome.SUCCESS, log.getOutcome());
@@ -182,6 +224,11 @@ class PublicPassTests {
         assertEquals(userId, log.getUserId());
         assertNotNull(log.getTraceCode());
         assertEquals("iPhone · Safari", log.getResponderDevice());
+        assertEquals("Test Responder", log.getResponderName());
+        assertEquals("Paramedic", log.getResponderRole());
+        assertEquals("Demo EMS", log.getResponderOrganization());
+        assertEquals("0199", log.getResponderPhoneLast4());
+        assertEquals("PHONE_OTP", log.getVerificationMethod());
         assertNotNull(log.getAccessedAt());
     }
 
@@ -193,8 +240,10 @@ class PublicPassTests {
                 Instant.now().plus(2, ChronoUnit.DAYS),
                 Set.of(ShareCategory.ALLERGIES)
         );
+        String verificationToken = emergencyOverrideToken(rawToken);
 
         mockMvc.perform(get("/api/v1/public/passes/{token}", rawToken)
+                        .header("X-MediPass-Verification", verificationToken)
                         .header("X-Correlation-Id", "responder-web-req-42"))
                 .andExpect(status().isOk())
                 .andExpect(header().string("X-Correlation-Id", "responder-web-req-42"));
@@ -211,8 +260,10 @@ class PublicPassTests {
                 Instant.now().plus(2, ChronoUnit.DAYS),
                 Set.of(ShareCategory.ALLERGIES)
         );
+        String verificationToken = emergencyOverrideToken(rawToken);
 
-        mockMvc.perform(get("/api/v1/public/passes/{token}", rawToken))
+        mockMvc.perform(get("/api/v1/public/passes/{token}", rawToken)
+                        .header("X-MediPass-Verification", verificationToken))
                 .andExpect(status().isOk())
                 .andExpect(header().exists("X-Correlation-Id"));
 
@@ -273,6 +324,73 @@ class PublicPassTests {
         assertEquals(saved.getId(), log.getPassId());
         assertEquals(userId, log.getUserId());
         assertNotNull(log.getAccessedAt());
+    }
+
+    private String emergencyOverrideToken(String rawToken) throws Exception {
+        MvcResult result = mockMvc.perform(post(
+                                "/api/v1/public/passes/{token}/verification/emergency-override",
+                                rawToken
+                        )
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name":"Emergency Responder",
+                                  "role":"Paramedic",
+                                  "organization":"Demo EMS",
+                                  "reason":"No cellular service during emergency"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.verificationMethod").value("EMERGENCY_OVERRIDE"))
+                .andReturn();
+
+        return objectMapper
+                .readTree(result.getResponse().getContentAsString())
+                .get("verificationToken")
+                .asText();
+    }
+
+    private String phoneVerificationToken(String rawToken) throws Exception {
+        MvcResult start = mockMvc.perform(post(
+                                "/api/v1/public/passes/{token}/verification/start",
+                                rawToken
+                        )
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name":"Test Responder",
+                                  "role":"Paramedic",
+                                  "organization":"Demo EMS",
+                                  "phone":"+15550010199"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.deliveryMode").value("DEVELOPMENT"))
+                .andReturn();
+
+        JsonNode challenge = objectMapper.readTree(start.getResponse().getContentAsString());
+        String challengeId = challenge.get("challengeId").asText();
+        String developmentCode = challenge.get("developmentCode").asText();
+
+        MvcResult confirm = mockMvc.perform(post(
+                                "/api/v1/public/passes/{token}/verification/confirm",
+                                rawToken
+                        )
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "challengeId":"%s",
+                                  "code":"%s"
+                                }
+                                """.formatted(challengeId, developmentCode)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.verificationMethod").value("PHONE_OTP"))
+                .andReturn();
+
+        return objectMapper
+                .readTree(confirm.getResponse().getContentAsString())
+                .get("verificationToken")
+                .asText();
     }
 
     private PassAccessLog onlyAuditLog() {
