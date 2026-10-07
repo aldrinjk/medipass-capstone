@@ -68,6 +68,11 @@ paths:
     post:
       tags: [Pass]
       security: [{bearerAuth: []}]
+      description: >
+        Creates a new emergency pass. The patient's server-stored sharing
+        preferences are authoritative at issuance time. The categories sent by
+        the client are retained in the request contract for compatibility but
+        cannot enable a category that is disabled in the stored preferences.
       requestBody:
         required: true
         content:
@@ -216,6 +221,10 @@ components:
         categories:
           type: array
           uniqueItems: true
+          description: >
+            Client snapshot of selected categories. The server re-reads the
+            authenticated patient's stored sharing preferences and uses those
+            values as the authoritative scope for the new pass.
           items: {$ref: '#/components/schemas/ShareCategory'}
         expiresAt: {type: string, format: date-time}
     CreatePassResponse:
@@ -226,7 +235,10 @@ components:
         status: {$ref: '#/components/schemas/PassStatus'}
         expiresAt: {type: string, format: date-time}
         publicUrl: {type: string, format: uri}
-        categories: {type: array, items: {$ref: '#/components/schemas/ShareCategory'}}
+        categories:
+          type: array
+          description: Authoritative categories persisted on the issued pass.
+          items: {$ref: '#/components/schemas/ShareCategory'}
     ShareCategory:
       type: string
       enum: [DEMOGRAPHICS, ALLERGIES, MEDICATIONS, CONDITIONS, EMERGENCY_CONTACT]
