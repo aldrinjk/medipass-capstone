@@ -58,6 +58,12 @@ jobs:
           npm run typecheck --if-present
           npm test --if-present
 
+      - name: apps/mobile - production dependency audit (advisory)
+        if: steps.detect.outputs.mobile == 'true'
+        continue-on-error: true
+        working-directory: apps/mobile
+        run: npm audit --omit=dev --audit-level=high
+
       - name: apps/responder-web - install, lint, test
         if: steps.detect.outputs.responder == 'true'
         working-directory: apps/responder-web
@@ -66,6 +72,12 @@ jobs:
           npm run lint --if-present
           npm run build --if-present
           npm test --if-present
+
+      - name: apps/responder-web - production dependency audit (advisory)
+        if: steps.detect.outputs.responder == 'true'
+        continue-on-error: true
+        working-directory: apps/responder-web
+        run: npm audit --omit=dev --audit-level=high
 
       - name: No frontend projects initialized yet
         if: steps.detect.outputs.mobile == 'false' && steps.detect.outputs.responder == 'false'
