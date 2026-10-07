@@ -1,6 +1,8 @@
 package com.medipass.pass;
 
 import com.medipass.sharing.ShareCategory;
+import com.medipass.sharing.SharingPreferencesResponse;
+import com.medipass.sharing.SharingPreferencesService;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -23,11 +25,16 @@ class EmergencyPassTokenCollisionTests {
     void createPassRetriesWhenGeneratedTokenHashAlreadyExists() {
         EmergencyPassRepository repository = mock(EmergencyPassRepository.class);
         PassTokenService passTokenService = mock(PassTokenService.class);
+        SharingPreferencesService sharingPreferencesService = mock(SharingPreferencesService.class);
         EmergencyPassService service = new EmergencyPassService(
                 repository,
                 passTokenService,
+                sharingPreferencesService,
                 "http://localhost:5173"
         );
+
+        when(sharingPreferencesService.getPreferences(any(UUID.class)))
+                .thenReturn(new SharingPreferencesResponse(Set.of(ShareCategory.ALLERGIES)));
 
         when(passTokenService.generateToken())
                 .thenReturn("collision-token", "fresh-token");
