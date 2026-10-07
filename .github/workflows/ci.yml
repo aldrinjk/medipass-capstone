@@ -100,11 +100,13 @@ jobs:
         with:
           gradle-version: "8.7"
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
       - name: Ensure Android SDK 35 is available
-        run: yes | sdkmanager "platforms;android-35" "build-tools;35.0.0" >/dev/null
+        shell: bash
+        run: |
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          test -x "$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" "platforms;android-35" "build-tools;35.0.0"
 
       - name: Build relay debug APK
         working-directory: apps/sms-relay-android
