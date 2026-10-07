@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
+import { useFocusEffect } from 'expo-router';
 import {
   View,
   Text,
@@ -29,7 +30,7 @@ export default function PassesScreen() {
     loadAuditLogs,
     loadAccessLogDetail,
   } = usePasses();
-  const { categories } = useSharingPreferences();
+  const { categories, loadPreferences } = useSharingPreferences();
 
   const [selectedPassForLogs, setSelectedPassForLogs] = useState<string | null>(null);
   const [isCreatingPass, setIsCreatingPass] = useState(false);
@@ -40,9 +41,24 @@ export default function PassesScreen() {
   const [expiryHours, setExpiryHours] = useState<number>(24);
   const [actionError, setActionError] = useState<string | null>(null);
 
+  useFocusEffect(
+    useCallback(() => {
+      void loadPreferences();
+    }, [loadPreferences])
+  );
+
   const handleCreatePass = async () => {
     setActionError(null);
-    if (categories.length === 0) {
+
+    const latestCategories = await loadPreferences();
+    if (latestCategories === null) {
+      setActionError(
+        'Could not refresh your sharing preferences. Check your connection and try again.'
+      );
+      return;
+    }
+
+    if (latestCategories.length === 0) {
       setActionError(
         'You must configure at least one shareable category in Sharing Preferences before generating a pass.'
       );
@@ -51,7 +67,7 @@ export default function PassesScreen() {
 
     setIsCreatingPass(true);
     try {
-      const newPass = await createPass(categories, expiryHours);
+      const newPass = await createPass(latestCategories, expiryHours);
       if (!newPass) {
         setActionError('Failed to generate pass. Please try again.');
       }
