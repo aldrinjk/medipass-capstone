@@ -10,14 +10,16 @@ export function useSharingPreferences() {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  const loadPreferences = useCallback(async () => {
+  const loadPreferences = useCallback(async (): Promise<ShareCategory[] | null> => {
     setIsLoading(true);
     setError(null);
     try {
       const data = await sharingService.getSharingPreferences();
       setCategories(data.categories);
+      return data.categories;
     } catch (err) {
       setError(getErrorMessage(err));
+      return null;
     } finally {
       setIsLoading(false);
     }
