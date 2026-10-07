@@ -226,6 +226,10 @@ React Native, and Vite compatibility first.
 The install-time vulnerability count includes development dependencies and is
 not, by itself, evidence that the shipped/runtime application is exploitable.
 
+Current release-candidate findings and the decision not to apply a blind
+breaking force-fix are recorded in
+[`docs/security/dependency-audit.md`](../security/dependency-audit.md).
+
 ## Final supervisor demo
 
 Use [demo-runbook.md](demo-runbook.md) for the final cross-device acceptance and fallback procedure.
