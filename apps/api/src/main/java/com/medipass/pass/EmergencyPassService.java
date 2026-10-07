@@ -1,5 +1,6 @@
 package com.medipass.pass;
 
+import com.medipass.sharing.SharingPreferencesService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,15 +16,18 @@ public class EmergencyPassService {
 
     private final EmergencyPassRepository repository;
     private final PassTokenService passTokenService;
+    private final SharingPreferencesService sharingPreferencesService;
     private final String publicResponderWebBaseUrl;
 
     public EmergencyPassService(
             EmergencyPassRepository repository,
             PassTokenService passTokenService,
+            SharingPreferencesService sharingPreferencesService,
             @Value("${PUBLIC_RESPONDER_WEB_BASE_URL:http://localhost:5173}") String publicResponderWebBaseUrl
     ) {
         this.repository = repository;
         this.passTokenService = passTokenService;
+        this.sharingPreferencesService = sharingPreferencesService;
         this.publicResponderWebBaseUrl = trimTrailingSlash(publicResponderWebBaseUrl);
     }
 
@@ -31,11 +35,18 @@ public class EmergencyPassService {
     public CreatePassResponse createPass(UUID userId, CreatePassRequest request) {
         GeneratedToken generatedToken = generateUniqueToken();
 
+        // The server-side sharing preference is authoritative. A stale or
+        // tampered client must never be able to put a disabled category into a
+        // newly issued emergency pass.
+        var currentCategories = sharingPreferencesService
+                .getPreferences(userId)
+                .categories();
+
         EmergencyPass emergencyPass = new EmergencyPass(
                 userId,
                 generatedToken.tokenHash(),
                 request.expiresAt(),
-                request.categories()
+                currentCategories
         );
 
         EmergencyPass saved = repository.saveAndFlush(emergencyPass);
