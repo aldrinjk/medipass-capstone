@@ -11,7 +11,7 @@ The MediPass mobile app is an authenticated patient-facing application built wit
 - Register, login, and automatically restore sessions securely.
 - Complete their emergency clinical profile (Demographics, Allergies, Medications, Conditions, and Primary Emergency Contact).
 - Configure fine-grained emergency **Sharing Preferences** using the frozen `ShareCategory` enum.
-- View active, expired, and revoked **Emergency Passes** with access log audit summaries.
+- View active, expired, and revoked **Emergency Passes** with responder-accountability audit summaries (outcome, responder identity metadata, verification method, device label, trace code, and masked phone digits when applicable).
 - Store sensitive JWT tokens using **Expo SecureStore** (`expo-secure-store`), never `AsyncStorage`.
 
 > **Note on Boundaries**:  
@@ -135,13 +135,19 @@ All calls are routed to `EXPO_PUBLIC_API_BASE_URL`. On a simulator this is often
 | **Passes** | `/api/v1/passes` | `GET`, `POST` | List passes & create new pass |
 | | `/api/v1/passes/{id}/revoke` | `POST` | Revoke active emergency pass |
 | | `/api/v1/passes/{id}/rotate` | `POST` | Rotate pass token and return a new `publicUrl` |
-| **Access logs** | `/api/v1/patients/me/access-logs` | `GET` | Access outcomes (`id`, `passId`, `outcome`, `accessedAt`) |
+| **Access logs** | `/api/v1/patients/me/access-logs` | `GET` | Patient-visible responder access history, including outcome, responder metadata, verification method, device label, trace code, and timestamp |
 
 ### Frozen Enums
 - **`ShareCategory`**: `DEMOGRAPHICS` | `ALLERGIES` | `MEDICATIONS` | `CONDITIONS` | `EMERGENCY_CONTACT`
 - **`PassStatus`**: `ACTIVE` | `REVOKED` | `EXPIRED`
 
 ---
+
+## Sharing and pass-scope authority
+
+The Sharing screen persists the patient's selected `ShareCategory` values to the backend. The Passes screen refreshes those preferences when focused and again immediately before pass creation.
+
+The backend is the final authority: `EmergencyPassService` reads the server-stored sharing preferences when issuing a new pass and does not trust a stale/tampered client category list. This prevents a disabled category from being reintroduced into a newly generated QR pass.
 
 ## 5. Verification & Acceptance Checklist
 
@@ -164,7 +170,7 @@ All calls are routed to `EXPO_PUBLIC_API_BASE_URL`. On a simulator this is often
 - [x] **Pass Management & Navigation**:
   - Create, revoke, and rotate active passes.
   - `publicUrl` is shown only after create/rotate (list metadata does not include it).
-  - Access logs show `accessedAt` and `outcome` (no IP or user-agent).
+  - Access logs show `accessedAt`, outcome, responder name/role/organization when supplied, verification method, masked phone digits, browser-visible device label, and `MP-...` trace code. The backend does not persist the responder's IP address or full phone number.
 - [x] **Mocks**:
   - Opt-in only via `EXPO_PUBLIC_USE_MOCKS=true`.
 - [x] **Automated Tests**:
