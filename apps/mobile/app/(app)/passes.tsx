@@ -288,7 +288,8 @@ export default function PassesScreen() {
                           : selectedAccessLog.verificationMethod?.replaceAll('_', ' ') || 'Unavailable for older access records'}
                     </Text>
                   </View>
-                  {selectedAccessLog.verificationNote ? (
+                  {selectedAccessLog.verificationMethod === 'EMERGENCY_OVERRIDE' &&
+                  selectedAccessLog.verificationNote ? (
                     <View style={styles.detailRow}>
                       <Text style={styles.detailLabel}>Emergency reason</Text>
                       <Text style={styles.detailValue}>{selectedAccessLog.verificationNote}</Text>
