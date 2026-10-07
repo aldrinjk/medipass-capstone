@@ -16,6 +16,7 @@ public class ResponderVerificationService {
     private final ResponderOtpProvider otpProvider;
     private final long challengeMinutes;
     private final long sessionMinutes;
+    private final int maxAttempts;
 
     public ResponderVerificationService(
             EmergencyPassRepository passRepository,
@@ -23,7 +24,8 @@ public class ResponderVerificationService {
             ResponderVerificationChallengeRepository challengeRepository,
             ResponderOtpProvider otpProvider,
             @Value("${medipass.responder-verification.challenge-minutes:5}") long challengeMinutes,
-            @Value("${medipass.responder-verification.session-minutes:15}") long sessionMinutes
+            @Value("${medipass.responder-verification.session-minutes:15}") long sessionMinutes,
+            @Value("${medipass.responder-verification.max-attempts:5}") int maxAttempts
     ) {
         this.passRepository = passRepository;
         this.passTokenService = passTokenService;
@@ -31,6 +33,7 @@ public class ResponderVerificationService {
         this.otpProvider = otpProvider;
         this.challengeMinutes = challengeMinutes;
         this.sessionMinutes = sessionMinutes;
+        this.maxAttempts = Math.max(1, maxAttempts);
     }
 
     @Transactional
@@ -63,7 +66,7 @@ public class ResponderVerificationService {
                 );
 
         challengeRepository.saveAndFlush(challenge);
-        otpProvider.start(phone);
+        otpProvider.start(challenge.getId(), phone);
 
         return new ResponderVerificationStartResponse(
                 challenge.getId(),
@@ -74,7 +77,7 @@ public class ResponderVerificationService {
         );
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = ResponderVerificationException.class)
     public ResponderVerificationSessionResponse confirm(
             String rawPassToken,
             ResponderVerificationConfirmRequest request
@@ -86,6 +89,12 @@ public class ResponderVerificationService {
                         "Verification challenge was not found."
                 ));
 
+        if (challenge.getStatus() == ResponderVerificationStatus.LOCKED) {
+            throw new ResponderVerificationException(
+                    "Too many incorrect attempts. Request a new code."
+            );
+        }
+
         if (challenge.getStatus() != ResponderVerificationStatus.PENDING
                 || !challenge.getChallengeExpiresAt().isAfter(Instant.now())
                 || challenge.getPhoneE164() == null) {
@@ -94,19 +103,31 @@ public class ResponderVerificationService {
             );
         }
 
-        if (!otpProvider.verify(challenge.getPhoneE164(), request.code())) {
-            throw new ResponderVerificationException("The verification code is incorrect.");
+        if (!otpProvider.verify(
+                challenge.getId(),
+                challenge.getPhoneE164(),
+                request.code()
+        )) {
+            challenge.recordFailedAttempt(maxAttempts);
+            challengeRepository.saveAndFlush(challenge);
+
+            if (challenge.getStatus() == ResponderVerificationStatus.LOCKED) {
+                throw new ResponderVerificationException(
+                        "Too many incorrect attempts. Request a new code."
+                );
+            }
+
+            throw new ResponderVerificationException(
+                    "The verification code is incorrect."
+            );
         }
 
         String rawSessionToken = passTokenService.generateToken();
         Instant sessionExpiry = sessionExpiry(pass);
-        String verificationNote = "DEVELOPMENT".equalsIgnoreCase(otpProvider.deliveryMode())
-                ? "Development OTP simulation; no SMS was sent."
-                : null;
         challenge.activatePhoneVerification(
                 passTokenService.hashToken(rawSessionToken),
                 sessionExpiry,
-                verificationNote
+                otpProvider.verificationNote()
         );
         challengeRepository.saveAndFlush(challenge);
 
