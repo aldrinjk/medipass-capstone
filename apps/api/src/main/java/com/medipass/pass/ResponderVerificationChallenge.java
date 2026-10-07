@@ -162,6 +162,13 @@ public class ResponderVerificationChallenge {
         );
     }
 
+    public void recordFailedAttempt(int maxAttempts) {
+        this.attempts++;
+        if (this.attempts >= maxAttempts) {
+            this.status = ResponderVerificationStatus.LOCKED;
+        }
+    }
+
     public void activatePhoneVerification(
             String tokenHash,
             Instant sessionExpiry,
@@ -212,6 +219,10 @@ public class ResponderVerificationChallenge {
 
     public ResponderVerificationStatus getStatus() {
         return status;
+    }
+
+    public int getAttempts() {
+        return attempts;
     }
 
     public ResponderVerificationMethod getVerificationMethod() {
