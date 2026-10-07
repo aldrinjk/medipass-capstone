@@ -35,7 +35,7 @@ what CI's `backend` job gates on for every PR.
 `PostgresFlywayIT` spins up a real `postgres:16-alpine` container via
 Testcontainers and:
 
-- Applies every Flyway migration (`V1`-`V6`) against a real Postgres engine,
+- Applies every Flyway migration (`V1`-`V8`) against a real Postgres engine,
   not H2 - this is what actually catches a dialect-specific migration
   mistake before it reaches the hosted Supabase database.
 - Round-trips a `User`, `EmergencyPass`, and `PassAccessLog` through JPA to
@@ -70,42 +70,38 @@ because they require real devices.
 
 ### Performance testing
 
-`infra/k6/public-pass-load-test.js` load-tests the one endpoint where
-response time is a patient-safety concern: the anonymous public pass lookup
-a responder hits right after scanning a QR code. It only ever calls that
-endpoint - no JWT, no authenticated routes.
+`infra/k6/public-pass-load-test.js` load-tests the verified emergency-summary
+hot path after the responder gate. An anonymous first GET to an active pass now
+correctly returns `428 RESPONDER_VERIFICATION_REQUIRED`, so the k6 script
+creates one short-lived **emergency override** session during `setup()` and
+then sends `X-MediPass-Verification` on each measured summary request.
 
-Steps (tested against a real local run - see command output below):
+This deliberately avoids depending on an SMS provider. It benchmarks the
+clinical-summary request after the gate; it does **not** benchmark SMS/OTP
+delivery.
 
-1. Start the API against any working datasource (Supabase, or the local
-   `docker compose --profile local-db up -d postgres` profile - see the
-   root `infra/docker-compose.yml`).
-2. Create one active pass and grab its raw token from
-   `CreatePassResponse.publicUrl` (the last path segment):
-   ```bash
-   TOKEN=$(curl -s -X POST http://localhost:8080/api/v1/auth/login \
-     -H "Content-Type: application/json" \
-     -d '{"email":"<demo-email>","password":"<demo-password>"}' \
-     | python -c "import sys,json;print(json.load(sys.stdin)['accessToken'])")
+Steps:
 
-   curl -s -X POST http://localhost:8080/api/v1/passes \
-     -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-     -d '{"categories":["ALLERGIES"],"expiresAt":"2027-01-01T00:00:00Z"}'
-   # -> take the last "/..." segment of publicUrl as PASS_TOKEN below
-   ```
-3. Run k6 against it. On Docker Desktop (Windows/macOS - confirmed working):
+1. Start the API against a working datasource and HAPI FHIR.
+2. Create an active pass and extract the raw token from
+   `CreatePassResponse.publicUrl`.
+3. Run k6. On Docker Desktop:
+
    ```bash
    docker run --rm -i -e BASE_URL=http://host.docker.internal:8080 \
      -e PASS_TOKEN=<raw-token> \
      grafana/k6 run - < infra/k6/public-pass-load-test.js
    ```
-   On Linux with a native k6 install, use `BASE_URL=http://localhost:8080`
-   directly instead.
 
-Thresholds: p95 latency under 500ms, error rate under 1%. The historical
-~330ms result was measured before the HAPI-backed clinical adapter landed, so
-performance should be re-baselined in the final demo environment with HAPI
-FHIR running.
+   On Linux with native k6, use `BASE_URL=http://localhost:8080`.
+
+The setup responder is entirely fictional. The load test expects the pass to
+remain active for the run and verifies `200`, presence of an access trace code,
+and absence of `userId` from the public clinical payload.
+
+Thresholds remain p95 latency under 500 ms and error rate under 1%. Re-baseline
+these numbers in the final demo environment because HAPI-backed clinical reads
+and responder verification were added after the earliest performance run.
 
 ## Resetting your environment
 
@@ -152,24 +148,35 @@ Never do this against a database holding anything other than synthetic data.
 
 ## Access-log field dictionary (audit hardening)
 
-`pass_access_log` / `PassAccessLog` (patient-facing `AccessLogResponse` omits
-`userId` and `correlationId`; the admin-facing `AdminAccessLogResponse`
-includes both):
+`pass_access_log` / `PassAccessLog` stores application audit metadata only;
+it never stores clinical content or raw public/verification tokens.
 
-| Field | Meaning | Privacy notes |
+Patient-facing `AccessLogResponse` omits `userId` and `correlationId`.
+Admin-facing `AdminAccessLogResponse` includes those internal support fields.
+
+| Field | Meaning | Privacy / assurance notes |
 |---|---|---|
-| `id` | Log row id (UUID) | Internal identifier only |
-| `passId` | The pass that was accessed, if the token resolved to one | `null` for `INVALID` outcomes (token never matched a pass) |
-| `userId` | The pass owner, if known | `null` for `INVALID` outcomes; never the responder's identity - responders are anonymous by design |
-| `outcome` | One of `SUCCESS`, `EXPIRED`, `REVOKED`, `INVALID` | See below |
-| `correlationId` | Request-scoped id, from the `X-Correlation-Id` request header if the caller supplied one, otherwise generated (`CorrelationIdFilter`) | Lets ops/support cross-reference an access-log row with application logs for the same request; never derived from or containing the raw pass token |
-| `accessedAt` | Server timestamp (UTC) | - |
+| `id` | Audit row UUID | Internal record identifier |
+| `passId` | Pass associated with the attempt | `null` for a token that never resolved |
+| `userId` | Patient/pass owner | Admin-facing only; not responder identity |
+| `outcome` | `SUCCESS`, `EXPIRED`, `REVOKED`, or `INVALID` | Clinical data is returned only for `SUCCESS` |
+| `correlationId` | Request correlation value | Admin-facing support/debug field |
+| `traceCode` | Server-generated `MP-...` code | Matches the responder banner/watermark for forensic correlation |
+| `responderDevice` | Browser-visible device/browser label | Privacy-limited label such as `iPhone · Safari`; not a MAC address or guaranteed physical-device identity |
+| `responderName` | Self-declared responder name | Phone OTP does not independently verify this legal name |
+| `responderRole` | Self-declared role | Optional |
+| `responderOrganization` | Self-declared organization | Optional |
+| `responderPhoneLast4` | Last four digits after phone verification | Full phone is not persisted in the audit database |
+| `verificationMethod` | `PHONE_OTP`, `EMERGENCY_OVERRIDE`, or reserved stronger future method | Development OTP is explicitly labelled as a simulation |
+| `verificationNote` | Assurance note or emergency-override reason | Used to distinguish simulated OTP and unverified override context |
+| `accessedAt` | Server timestamp | UTC |
 
-**What is deliberately never stored**: the raw public pass token (only its
-SHA-256 hash lives on `emergency_pass`, and access logs don't reference it at
-all), the responder's IP address, user agent, or any other request metadata
-beyond the correlation id, and no clinical content (allergies, medications,
-etc. are never written to the audit log, only which pass/outcome occurred).
+**Deliberately not persisted:** raw public pass token, responder verification
+token, OTP code, full responder phone number, IP address, raw user-agent string,
+or clinical payload. The responder web may keep the full verified phone number
+only in page memory so it can appear in the visible forensic watermark for that
+session.
+
 
 ## Audit failure policy
 
