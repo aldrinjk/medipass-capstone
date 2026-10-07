@@ -52,7 +52,12 @@ medipass:
     demo-code: ${RESPONDER_DEMO_OTP:123456}
     challenge-minutes: ${RESPONDER_OTP_CHALLENGE_MINUTES:5}
     session-minutes: ${RESPONDER_SESSION_MINUTES:15}
+    max-attempts: ${RESPONDER_OTP_MAX_ATTEMPTS:5}
     twilio:
       account-sid: ${TWILIO_ACCOUNT_SID:}
       auth-token: ${TWILIO_AUTH_TOKEN:}
       service-sid: ${TWILIO_VERIFY_SERVICE_SID:}
+  sms-relay:
+    shared-key: ${SMS_RELAY_SHARED_KEY:}
+    claim-seconds: ${SMS_RELAY_CLAIM_SECONDS:45}
+    max-delivery-attempts: ${SMS_RELAY_MAX_DELIVERY_ATTEMPTS:3}
