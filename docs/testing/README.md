@@ -205,6 +205,27 @@ Full coverage of all four outcomes lives in
 `apps/api/src/test/java/com/medipass/pass/PublicPassTests.java`.
 
 
+## Frontend dependency audit
+
+CI runs an advisory production-dependency audit for both frontends:
+
+```bash
+cd apps/mobile
+npm audit --omit=dev --audit-level=high
+
+cd ../responder-web
+npm audit --omit=dev --audit-level=high
+```
+
+These audit steps are intentionally non-blocking because Expo/React Native
+dependency trees can contain transitive advisories that require coordinated SDK
+upgrades rather than blind package overrides. Review the advisory output before a
+release candidate. Do **not** run `npm audit fix --force` without checking Expo,
+React Native, and Vite compatibility first.
+
+The install-time vulnerability count includes development dependencies and is
+not, by itself, evidence that the shipped/runtime application is exploitable.
+
 ## Final supervisor demo
 
 Use [demo-runbook.md](demo-runbook.md) for the final cross-device acceptance and fallback procedure.
