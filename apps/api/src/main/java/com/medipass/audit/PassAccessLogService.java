@@ -35,6 +35,14 @@ public class PassAccessLogService {
                 log.getId(),
                 log.getPassId(),
                 log.getOutcome(),
+                log.getTraceCode(),
+                log.getResponderDevice(),
+                log.getResponderName(),
+                log.getResponderRole(),
+                log.getResponderOrganization(),
+                log.getResponderPhoneLast4(),
+                log.getVerificationMethod(),
+                log.getVerificationNote(),
                 log.getAccessedAt()
         );
     }

@@ -9,7 +9,10 @@ import com.medipass.pass.PassNotFoundException;
 import com.medipass.pass.PassStatus;
 import com.medipass.pass.PublicPassGoneException;
 import com.medipass.pass.PublicPassNotFoundException;
+import com.medipass.pass.ResponderVerificationException;
+import com.medipass.pass.ResponderVerificationRequiredException;
 import com.medipass.patient.ClinicalResourceNotFoundException;
+import com.medipass.patient.ClinicalServiceUnavailableException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import java.util.LinkedHashMap;
@@ -137,6 +140,21 @@ public class GlobalExceptionHandler {
         );
     }
 
+    @ExceptionHandler(ClinicalServiceUnavailableException.class)
+    public ResponseEntity<ApiError> handleClinicalServiceUnavailable(
+            ClinicalServiceUnavailableException ex,
+            HttpServletRequest request
+    ) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(
+                ApiError.of(
+                        HttpStatus.SERVICE_UNAVAILABLE.value(),
+                        "CLINICAL_SERVICE_UNAVAILABLE",
+                        ex.getMessage(),
+                        request.getRequestURI()
+                )
+        );
+    }
+
     @ExceptionHandler(PassNotFoundException.class)
     public ResponseEntity<ApiError> handlePassNotFound(
             PassNotFoundException ex,
@@ -210,6 +228,36 @@ public class GlobalExceptionHandler {
                 ApiError.of(
                         HttpStatus.GONE.value(),
                         code,
+                        ex.getMessage(),
+                        request.getRequestURI()
+                )
+        );
+    }
+
+    @ExceptionHandler(ResponderVerificationRequiredException.class)
+    public ResponseEntity<ApiError> handleResponderVerificationRequired(
+            ResponderVerificationRequiredException ex,
+            HttpServletRequest request
+    ) {
+        return ResponseEntity.status(HttpStatus.PRECONDITION_REQUIRED).body(
+                ApiError.of(
+                        HttpStatus.PRECONDITION_REQUIRED.value(),
+                        "RESPONDER_VERIFICATION_REQUIRED",
+                        ex.getMessage(),
+                        request.getRequestURI()
+                )
+        );
+    }
+
+    @ExceptionHandler(ResponderVerificationException.class)
+    public ResponseEntity<ApiError> handleResponderVerification(
+            ResponderVerificationException ex,
+            HttpServletRequest request
+    ) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                ApiError.of(
+                        HttpStatus.BAD_REQUEST.value(),
+                        "RESPONDER_VERIFICATION_FAILED",
                         ex.getMessage(),
                         request.getRequestURI()
                 )

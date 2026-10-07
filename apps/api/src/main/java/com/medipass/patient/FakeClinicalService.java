@@ -10,6 +10,7 @@ import com.medipass.patient.dto.MedicationDto;
 import com.medipass.patient.dto.MedicationRequest;
 import com.medipass.patient.dto.PatientProfileDto;
 import com.medipass.patient.dto.UpdatePatientProfileRequest;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -19,6 +20,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Service
+@Profile("test")
 public class FakeClinicalService implements ClinicalService {
 
     private final Map<UUID, PatientProfileDto> profiles = new ConcurrentHashMap<>();
@@ -173,6 +175,17 @@ public class FakeClinicalService implements ClinicalService {
 
     private ConditionDto toCondition(UUID id, ConditionRequest request) {
         return new ConditionDto(id, request.name().trim(), normalize(request.status()), normalize(request.notes()));
+    }
+
+    @Override
+    public String getFhirBundleJson(UUID userId) {
+        return """
+                {
+                  "resourceType": "Bundle",
+                  "type": "collection",
+                  "entry": []
+                }
+                """;
     }
 
     private String normalize(String value) {

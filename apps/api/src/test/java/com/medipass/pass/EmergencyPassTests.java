@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.medipass.auth.User;
 import com.medipass.auth.UserRepository;
+import com.medipass.sharing.SharingPreference;
+import com.medipass.sharing.SharingPreferenceRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -24,6 +26,7 @@ import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -45,6 +48,9 @@ class EmergencyPassTests {
     private UserRepository userRepository;
 
     @Autowired
+    private SharingPreferenceRepository sharingPreferenceRepository;
+
+    @Autowired
     private PassTokenService passTokenService;
 
     private UUID userAId;
@@ -53,12 +59,17 @@ class EmergencyPassTests {
     @BeforeEach
     void setUp() {
         emergencyPassRepository.deleteAll();
+        sharingPreferenceRepository.deleteAll();
         userRepository.deleteAll();
 
         User userA = userRepository.save(new User("pass-a@medipass.test", "test-password-hash"));
         User userB = userRepository.save(new User("pass-b@medipass.test", "test-password-hash"));
         userAId = userA.getId();
         userBId = userB.getId();
+
+        SharingPreference preference = new SharingPreference(userAId);
+        preference.update(false, true, true, false, true);
+        sharingPreferenceRepository.saveAndFlush(preference);
     }
 
     @AfterEach
@@ -102,6 +113,44 @@ class EmergencyPassTests {
         org.junit.jupiter.api.Assertions.assertEquals(passTokenService.hashToken(rawToken), saved.getTokenHash());
         org.junit.jupiter.api.Assertions.assertEquals(
                 List.of("ALLERGIES", "EMERGENCY_CONTACT", "MEDICATIONS").stream().sorted().toList(),
+                saved.getCategories().stream().map(Enum::name).sorted().toList()
+        );
+    }
+
+    @Test
+    void createPassUsesCurrentServerPreferencesEvenWhenClientCategoriesAreStale() throws Exception {
+        mockMvc.perform(put("/api/v1/patients/me/sharing-preferences")
+                        .with(user(userAId.toString()).roles("PATIENT"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "categories": ["DEMOGRAPHICS", "EMERGENCY_CONTACT"]
+                                }
+                                """))
+                .andExpect(status().isOk());
+
+        MvcResult result = mockMvc.perform(post("/api/v1/passes")
+                        .with(user(userAId.toString()).roles("PATIENT"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "categories": ["ALLERGIES", "MEDICATIONS", "CONDITIONS"],
+                                  "expiresAt": "%s"
+                                }
+                                """.formatted(Instant.now().plus(2, ChronoUnit.DAYS))))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.categories", containsInAnyOrder(
+                        "DEMOGRAPHICS", "EMERGENCY_CONTACT"
+                )))
+                .andReturn();
+
+        UUID passId = UUID.fromString(
+                objectMapper.readTree(result.getResponse().getContentAsString()).get("passId").asText()
+        );
+
+        EmergencyPass saved = emergencyPassRepository.findById(passId).orElseThrow();
+        org.junit.jupiter.api.Assertions.assertEquals(
+                List.of("DEMOGRAPHICS", "EMERGENCY_CONTACT"),
                 saved.getCategories().stream().map(Enum::name).sorted().toList()
         );
     }

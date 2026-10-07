@@ -1,1 +1,8 @@
-# P4 completes HAPI FHIR R4 JPA configuration.
+# MediPass local HAPI FHIR R4 server overrides.
+# The hapiproject/hapi image provides the JPA server and local H2 persistence.
+# Clinical data is synthetic/demo-only in this capstone environment.
+hapi:
+  fhir:
+    version: R4
+    default_encoding: json
+    narrative_enabled: false

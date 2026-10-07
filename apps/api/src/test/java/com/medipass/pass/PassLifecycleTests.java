@@ -81,6 +81,27 @@ class PassLifecycleTests {
                 .andExpect(jsonPath("$.code").value("PUBLIC_PASS_REVOKED"));
     }
 
+
+    @Test
+    void repeatedRevokeIsIdempotent() throws Exception {
+        CreatedPass created = createActivePass(userAId);
+
+        mockMvc.perform(post("/api/v1/passes/{passId}/revoke", created.passId())
+                        .with(user(userAId.toString()).roles("PATIENT")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("REVOKED"));
+
+        mockMvc.perform(post("/api/v1/passes/{passId}/revoke", created.passId())
+                        .with(user(userAId.toString()).roles("PATIENT")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("REVOKED"));
+
+        assertEquals(
+                PassStatus.REVOKED,
+                emergencyPassRepository.findById(created.passId()).orElseThrow().getStatus()
+        );
+    }
+
     @Test
     void lifecycleActionsAreScopedToAuthenticatedPatient() throws Exception {
         CreatedPass created = createActivePass(userAId);
@@ -148,7 +169,8 @@ class PassLifecycleTests {
                 .andExpect(jsonPath("$.code").value("PUBLIC_PASS_NOT_FOUND"));
 
         mockMvc.perform(get("/api/v1/public/passes/{token}", newRawToken))
-                .andExpect(status().isOk());
+                .andExpect(status().isPreconditionRequired())
+                .andExpect(jsonPath("$.code").value("RESPONDER_VERIFICATION_REQUIRED"));
     }
 
     @Test
