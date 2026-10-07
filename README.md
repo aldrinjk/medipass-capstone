@@ -1,6 +1,6 @@
 # MediPass Capstone
 
-**MediPass** is a patient-controlled QR-based emergency health passport. A patient maintains a small emergency profile, chooses which categories may be shared, creates a time-limited emergency pass, and displays its QR code in the MediPass mobile app. A responder scans the QR with a normal phone camera and opens a public browser page without installing MediPass or creating an account. The backend validates the token, expiry, revocation status, and sharing scope before returning only permitted emergency information. Public access is audited.
+**MediPass** is a patient-controlled QR-based emergency health passport. A patient maintains a small emergency profile, chooses which categories may be shared, creates a time-limited emergency pass, and displays its QR code in the MediPass mobile app. A responder scans the QR with a normal phone camera and opens a public browser page without installing MediPass or creating a patient account. Before clinical information is released, the responder completes phone verification or explicitly uses an unverified emergency override. The backend validates the token, expiry, revocation status, server-stored sharing scope, and responder session before returning only permitted emergency information. Public access is audited with responder accountability metadata and an `MP-...` trace code.
 
 ## Locked architecture (Revision 2)
 
@@ -35,7 +35,12 @@ Patient Expo App ---------------------> Spring Boot API
 QR contains only publicUrl
         |
         v
-Normal phone camera -> Public Responder Web -> GET /api/v1/public/passes/{token}
+Normal phone camera -> Public Responder Web
+                         |
+                         +-> active pass without responder session: 428 verification required
+                         +-> phone OTP or explicit emergency override
+                         +-> GET /api/v1/public/passes/{token} with X-MediPass-Verification
+                         +-> filtered emergency summary + audit/trace metadata
 ```
 
 ## Repository structure
@@ -86,7 +91,9 @@ Key shared pass behavior:
 
 - `ShareCategory`: `DEMOGRAPHICS`, `ALLERGIES`, `MEDICATIONS`, `CONDITIONS`, `EMERGENCY_CONTACT`
 - `PassStatus`: `ACTIVE`, `REVOKED`, `EXPIRED`
-- Public pass endpoint returns `200` for an active pass, `404` for an invalid token, and `410` for an expired or revoked pass.
+- The backend's stored sharing preferences are authoritative when a new pass is issued; stale/tampered client categories cannot enable additional data.
+- Public pass endpoint returns `428` for an active pass that still needs responder verification, `200` after a valid short-lived responder session is supplied, `404` for an invalid token, and `410` for an expired or revoked pass.
+- Phone OTP proves control of the supplied number, not the responder's legal name. Emergency override remains available but is explicitly logged as unverified.
 
 ## Database rules
 
