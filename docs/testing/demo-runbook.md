@@ -122,7 +122,9 @@ Perform the following in order:
 11. Complete the responder verification gate using fictional responder details.
     In development mode, use the clearly labelled test OTP shown by the page.
 12. Confirm the emergency summary opens only after verification and that only
-    categories selected in the pass are visible.
+    the patient's currently saved sharing categories are visible. New pass
+    issuance re-reads the server-stored preferences, so a stale client must not
+    re-enable a disabled category.
 13. Confirm the banner states the responder name/role/organization, verification
     method, masked phone digits when applicable, device label, and trace code.
     For PHONE_OTP, the phone is verified while the name remains self-declared.
@@ -188,7 +190,8 @@ At minimum verify:
 - expired pass
 - revoked pass
 - rotated token
-- temporary network failure/retry
+- temporary network failure/retry; the responder should leave the loading state
+  and show the retryable connection error in roughly 10 seconds
 - no hidden ShareCategory appears in the responder output
 - clinical information is not returned before responder verification or an explicit emergency override
 - phone-OTP access records responder name/role/organization, masked last four phone digits, device, and trace code
