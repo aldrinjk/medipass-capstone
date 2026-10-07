@@ -4,7 +4,7 @@ import { AccessHistoryList } from '../../features/sharing/AccessHistoryList';
 import type { AccessLogResponse } from '../../types/pass';
 
 describe('AccessHistoryList responder accountability', () => {
-  it('shows responder identity, verification status, device, and trace', () => {
+  it('shows responder identity, verification status, device, and trace', async () => {
     const log: AccessLogResponse = {
       id: 'record-1',
       passId: 'pass-1',
@@ -20,7 +20,7 @@ describe('AccessHistoryList responder accountability', () => {
       accessedAt: '2026-10-06T12:12:38Z',
     };
 
-    const { getByText } = render(
+    const { getByText } = await render(
       <AccessHistoryList logs={[log]} passId="pass-1" />
     );
 
