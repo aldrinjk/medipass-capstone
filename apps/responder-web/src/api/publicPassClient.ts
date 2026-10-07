@@ -18,6 +18,25 @@ export type VerificationActionResult<T> =
   | { kind: 'success'; data: T }
   | { kind: 'error'; message: string }
 
+const REQUEST_TIMEOUT_MS = 10_000
+
+async function fetchWithTimeout(
+  input: RequestInfo | URL,
+  init: RequestInit,
+): Promise<Response> {
+  const controller = new AbortController()
+  const timeoutId = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
+
+  try {
+    return await fetch(input, {
+      ...init,
+      signal: controller.signal,
+    })
+  } finally {
+    window.clearTimeout(timeoutId)
+  }
+}
+
 export async function fetchPublicPass(
   token: string,
   verificationToken?: string,
@@ -34,7 +53,7 @@ export async function fetchPublicPass(
 
   let response: Response
   try {
-    response = await fetch(
+    response = await fetchWithTimeout(
       `${API_BASE_URL}/api/v1/public/passes/${encodeURIComponent(trimmedToken)}`,
       {
         method: 'GET',
@@ -112,7 +131,7 @@ async function postVerification<T>(
   body: unknown,
 ): Promise<VerificationActionResult<T>> {
   try {
-    const response = await fetch(
+    const response = await fetchWithTimeout(
       `${API_BASE_URL}/api/v1/public/passes/${encodeURIComponent(token.trim())}/${path}`,
       {
         method: 'POST',
