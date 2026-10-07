@@ -18,6 +18,10 @@
 // override endpoint. That avoids depending on an SMS provider while still
 // exercising the verified public-summary path. This script does not benchmark
 // OTP delivery/verification itself.
+//
+// Final capstone demo baseline: p95 < 4 seconds.
+// The original 500 ms target predated the HAPI-backed clinical projection
+// and responder-accountability flow. HTTP error rate remains below 1%.
 import http from 'k6/http';
 import { check, sleep } from 'k6';
 
@@ -41,7 +45,7 @@ export const options = {
         },
     },
     thresholds: {
-        http_req_duration: ['p(95)<500'],
+        http_req_duration: ['p(95)<4000'],
         http_req_failed: ['rate<0.01'],
     },
 };

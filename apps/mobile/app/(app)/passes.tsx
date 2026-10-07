@@ -280,7 +280,10 @@ export default function PassesScreen() {
                   <View style={styles.detailRow}>
                     <Text style={styles.detailLabel}>Responder</Text>
                     <Text style={styles.detailValue}>
-                      {selectedAccessLog.responderName || 'Unavailable for older access records'}
+                      {selectedAccessLog.responderName ||
+                        (selectedAccessLog.outcome === 'SUCCESS'
+                          ? 'Unavailable for older access records'
+                          : 'Not collected because access ended before responder verification')}
                     </Text>
                   </View>
                   <View style={styles.detailRow}>
@@ -289,7 +292,10 @@ export default function PassesScreen() {
                       {[
                         selectedAccessLog.responderRole,
                         selectedAccessLog.responderOrganization,
-                      ].filter(Boolean).join(' · ') || 'Not provided'}
+                      ].filter(Boolean).join(' · ') ||
+                        (selectedAccessLog.outcome === 'SUCCESS'
+                          ? 'Not provided'
+                          : 'Not collected because access ended before responder verification')}
                     </Text>
                   </View>
                   <View style={styles.detailRow}>
@@ -301,7 +307,10 @@ export default function PassesScreen() {
                           : `Phone verified${selectedAccessLog.responderPhoneLast4 ? ` · mobile ending ${selectedAccessLog.responderPhoneLast4}` : ''}. Name is self-declared.`
                         : selectedAccessLog.verificationMethod === 'EMERGENCY_OVERRIDE'
                           ? 'Unverified emergency override. Identity is self-declared.'
-                          : selectedAccessLog.verificationMethod?.replaceAll('_', ' ') || 'Unavailable for older access records'}
+                          : selectedAccessLog.verificationMethod?.replaceAll('_', ' ') ||
+                            (selectedAccessLog.outcome === 'SUCCESS'
+                              ? 'Unavailable for older access records'
+                              : 'Not applicable because access ended before verification')}
                     </Text>
                   </View>
                   {selectedAccessLog.verificationMethod === 'EMERGENCY_OVERRIDE' &&

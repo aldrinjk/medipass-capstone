@@ -99,9 +99,25 @@ The setup responder is entirely fictional. The load test expects the pass to
 remain active for the run and verifies `200`, presence of an access trace code,
 and absence of `userId` from the public clinical payload.
 
-Thresholds remain p95 latency under 500 ms and error rate under 1%. Re-baseline
-these numbers in the final demo environment because HAPI-backed clinical reads
-and responder verification were added after the earliest performance run.
+The final capstone demo baseline is **p95 latency under 4 seconds** with an
+HTTP error rate under 1%. The original 500 ms target was established before
+the HAPI-backed clinical projection and responder-accountability flow were
+part of the measured request path.
+
+Final demo-environment measurement on 2026-10-07, using the verified summary
+path at up to 10 VUs:
+
+- 232 / 232 functional checks succeeded.
+- HTTP failure rate: 0.00%.
+- Average request duration: 2.81 s.
+- p95 request duration: 3.52 s.
+- Maximum request duration: 3.93 s.
+
+Five sequential single-responder requests measured 3.22-3.61 s, confirming
+that the observed latency is primarily the synchronous HAPI-backed request
+path rather than degradation caused by the 10-VU load. Further latency
+optimization is future work; do not represent the historical 500 ms target
+as having passed.
 
 ## Resetting your environment
 

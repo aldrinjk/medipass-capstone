@@ -174,6 +174,11 @@ And verify the GitHub Actions CI checks for the integration PR are green:
 - Patient mobile frontend
 - Responder web frontend
 
+Also run the verified responder k6 smoke test described in the testing guide.
+The final capstone demo baseline is p95 latency under 4 seconds with an HTTP
+error rate under 1%. The historical 500 ms target predates the final
+HAPI-backed clinical projection and responder-accountability request path.
+
 The backend verification includes real PostgreSQL/Flyway and HAPI FHIR R4
 Testcontainers integration tests.
 
