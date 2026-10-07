@@ -166,6 +166,9 @@ public class ResponderVerificationChallenge {
         this.attempts++;
         if (this.attempts >= maxAttempts) {
             this.status = ResponderVerificationStatus.LOCKED;
+            // Once a challenge is locked, retain only the masked last four
+            // digits; the full responder number is no longer needed.
+            this.phoneE164 = null;
         }
     }
 
