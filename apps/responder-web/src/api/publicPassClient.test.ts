@@ -11,6 +11,7 @@ function jsonResponse(status: number, body: unknown): Response {
 
 describe('fetchPublicPass', () => {
   afterEach(() => {
+    vi.useRealTimers()
     vi.restoreAllMocks()
   })
 
@@ -134,6 +135,27 @@ describe('fetchPublicPass', () => {
     const result = await fetchPublicPass('any-token')
 
     expect(result).toEqual({ kind: 'network-error' })
+  })
+
+  it('aborts a stalled responder request after 10 seconds', async () => {
+    vi.useFakeTimers()
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((_input: RequestInfo | URL, init?: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener('abort', () => {
+            reject(new DOMException('The operation was aborted.', 'AbortError'))
+          })
+        }),
+      ),
+    )
+
+    const resultPromise = fetchPublicPass('stalled-token')
+
+    await vi.advanceTimersByTimeAsync(10_000)
+
+    await expect(resultPromise).resolves.toEqual({ kind: 'network-error' })
   })
 
   it('returns not-found for a blank token without calling fetch', async () => {
