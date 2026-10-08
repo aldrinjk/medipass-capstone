@@ -6,13 +6,15 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.data.domain.Sort;
 import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.EntityGraph;
 
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 public interface EmergencyPassRepository extends JpaRepository<EmergencyPass, UUID> {
-    List<EmergencyPass> findAllByUserIdOrderByCreatedAtDesc(UUID userId);
+    @EntityGraph(attributePaths = "categories")
+List<EmergencyPass> findAllByUserIdOrderByCreatedAtDesc(UUID userId);
     Optional<EmergencyPass> findByIdAndUserId(UUID id, UUID userId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)

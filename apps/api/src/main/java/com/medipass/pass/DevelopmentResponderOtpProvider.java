@@ -4,6 +4,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
+import java.util.UUID;
+
 @Service
 @ConditionalOnProperty(
         name = "medipass.responder-verification.provider",
@@ -11,6 +13,9 @@ import org.springframework.stereotype.Service;
         matchIfMissing = true
 )
 public class DevelopmentResponderOtpProvider implements ResponderOtpProvider {
+
+    private static final String VERIFICATION_NOTE =
+            "Development OTP simulation; no SMS was sent.";
 
     private final String demoCode;
 
@@ -21,13 +26,13 @@ public class DevelopmentResponderOtpProvider implements ResponderOtpProvider {
     }
 
     @Override
-    public void start(String phoneE164) {
+    public void start(UUID challengeId, String phoneE164) {
         // Development-only provider. No SMS is sent. The code is returned to
         // the responder web UI with an explicit development label.
     }
 
     @Override
-    public boolean verify(String phoneE164, String code) {
+    public boolean verify(UUID challengeId, String phoneE164, String code) {
         return demoCode.equals(code);
     }
 
@@ -39,5 +44,10 @@ public class DevelopmentResponderOtpProvider implements ResponderOtpProvider {
     @Override
     public String developmentCode() {
         return demoCode;
+    }
+
+    @Override
+    public String verificationNote() {
+        return VERIFICATION_NOTE;
     }
 }

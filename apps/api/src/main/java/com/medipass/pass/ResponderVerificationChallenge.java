@@ -162,6 +162,16 @@ public class ResponderVerificationChallenge {
         );
     }
 
+    public void recordFailedAttempt(int maxAttempts) {
+        this.attempts++;
+        if (this.attempts >= maxAttempts) {
+            this.status = ResponderVerificationStatus.LOCKED;
+            // Once a challenge is locked, retain only the masked last four
+            // digits; the full responder number is no longer needed.
+            this.phoneE164 = null;
+        }
+    }
+
     public void activatePhoneVerification(
             String tokenHash,
             Instant sessionExpiry,
@@ -212,6 +222,10 @@ public class ResponderVerificationChallenge {
 
     public ResponderVerificationStatus getStatus() {
         return status;
+    }
+
+    public int getAttempts() {
+        return attempts;
     }
 
     public ResponderVerificationMethod getVerificationMethod() {

@@ -9,6 +9,8 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 
+import java.util.UUID;
+
 @Service
 @ConditionalOnProperty(
         name = "medipass.responder-verification.provider",
@@ -34,7 +36,7 @@ public class TwilioVerifyResponderOtpProvider implements ResponderOtpProvider {
     }
 
     @Override
-    public void start(String phoneE164) {
+    public void start(UUID challengeId, String phoneE164) {
         MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
         body.add("To", phoneE164);
         body.add("Channel", "sms");
@@ -56,7 +58,7 @@ public class TwilioVerifyResponderOtpProvider implements ResponderOtpProvider {
     }
 
     @Override
-    public boolean verify(String phoneE164, String code) {
+    public boolean verify(UUID challengeId, String phoneE164, String code) {
         MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
         body.add("To", phoneE164);
         body.add("Code", code);

@@ -13,6 +13,9 @@ import com.medipass.pass.ResponderVerificationException;
 import com.medipass.pass.ResponderVerificationRequiredException;
 import com.medipass.patient.ClinicalResourceNotFoundException;
 import com.medipass.patient.ClinicalServiceUnavailableException;
+import com.medipass.relay.SmsRelayAuthenticationException;
+import com.medipass.relay.SmsRelayJobNotFoundException;
+import com.medipass.relay.SmsRelayJobStateException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import java.util.LinkedHashMap;
@@ -258,6 +261,51 @@ public class GlobalExceptionHandler {
                 ApiError.of(
                         HttpStatus.BAD_REQUEST.value(),
                         "RESPONDER_VERIFICATION_FAILED",
+                        ex.getMessage(),
+                        request.getRequestURI()
+                )
+        );
+    }
+
+    @ExceptionHandler(SmsRelayAuthenticationException.class)
+    public ResponseEntity<ApiError> handleSmsRelayAuthentication(
+            SmsRelayAuthenticationException ex,
+            HttpServletRequest request
+    ) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
+                ApiError.of(
+                        HttpStatus.UNAUTHORIZED.value(),
+                        "SMS_RELAY_UNAUTHORIZED",
+                        ex.getMessage(),
+                        request.getRequestURI()
+                )
+        );
+    }
+
+    @ExceptionHandler(SmsRelayJobNotFoundException.class)
+    public ResponseEntity<ApiError> handleSmsRelayJobNotFound(
+            SmsRelayJobNotFoundException ex,
+            HttpServletRequest request
+    ) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                ApiError.of(
+                        HttpStatus.NOT_FOUND.value(),
+                        "SMS_RELAY_JOB_NOT_FOUND",
+                        ex.getMessage(),
+                        request.getRequestURI()
+                )
+        );
+    }
+
+    @ExceptionHandler(SmsRelayJobStateException.class)
+    public ResponseEntity<ApiError> handleSmsRelayJobState(
+            SmsRelayJobStateException ex,
+            HttpServletRequest request
+    ) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                ApiError.of(
+                        HttpStatus.CONFLICT.value(),
+                        "SMS_RELAY_JOB_STATE_CONFLICT",
                         ex.getMessage(),
                         request.getRequestURI()
                 )
