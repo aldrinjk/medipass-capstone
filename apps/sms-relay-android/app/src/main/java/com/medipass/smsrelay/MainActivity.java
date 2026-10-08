@@ -75,12 +75,19 @@ public class MainActivity extends Activity {
                 return;
             }
 
-            if (getResultCode() == Activity.RESULT_OK) {
+            int resultCode = getResultCode();
+            if (resultCode == Activity.RESULT_OK) {
                 updateStatus("SMS sent. Confirming delivery with MediPass…");
                 networkExecutor.submit(() -> acknowledgeSent(job));
             } else {
-                String error = "Android SMS send failed with result code "
-                        + getResultCode();
+                int modemErrorCode = intent.getIntExtra("errorCode", Integer.MIN_VALUE);
+                String error = "Android SMS send failed: "
+                        + smsResultDescription(resultCode)
+                        + " (result=" + resultCode
+                        + (modemErrorCode == Integer.MIN_VALUE
+                            ? ""
+                            : ", modemError=" + modemErrorCode)
+                        + ")";
                 updateStatus(error);
                 networkExecutor.submit(() -> acknowledgeFailed(job, error));
             }
@@ -451,8 +458,30 @@ public class MainActivity extends Activity {
             // failure does not permanently lose the OTP job.
         } finally {
             currentJob = null;
-            updateStatus("SMS delivery failed. Waiting for retry.");
+            runOnUiThread(() -> {
+                lastSmsText.setText(
+                        "Failed ✕  Destination ••••"
+                                + lastFour(job.destinationE164)
+                                + "  · "
+                                + error
+                );
+                updateStatus(error + " — waiting for retry.");
+            });
         }
+    }
+
+    private String smsResultDescription(int resultCode) {
+        return switch (resultCode) {
+            case SmsManager.RESULT_ERROR_GENERIC_FAILURE -> "generic failure";
+            case SmsManager.RESULT_ERROR_RADIO_OFF -> "radio off";
+            case SmsManager.RESULT_ERROR_NULL_PDU -> "null PDU";
+            case SmsManager.RESULT_ERROR_NO_SERVICE -> "no service";
+            case SmsManager.RESULT_ERROR_LIMIT_EXCEEDED -> "SMS send limit exceeded";
+            case SmsManager.RESULT_ERROR_FDN_CHECK_FAILURE -> "FDN check failure";
+            case SmsManager.RESULT_ERROR_SHORT_CODE_NOT_ALLOWED -> "short code not allowed";
+            case SmsManager.RESULT_ERROR_SHORT_CODE_NEVER_ALLOWED -> "short code never allowed";
+            default -> "unknown error";
+        };
     }
 
     private HttpResult request(
