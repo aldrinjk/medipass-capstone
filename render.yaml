@@ -40,16 +40,14 @@ services:
         value: https://medipass-responder-aldrinjk.onrender.com
 
   - type: web
-    name: medipass-responder-aldrinjk
-    runtime: static
+    name: medipass-responder-web-aldrinjk
+    runtime: node
+    plan: free
+    region: singapore
     branch: develop
     buildCommand: cd apps/responder-web && npm ci && npm run build
-    staticPublishPath: ./apps/responder-web/dist
+    startCommand: node apps/responder-web/server.cjs
     autoDeployTrigger: checksPass
     envVars:
       - key: VITE_API_BASE_URL
         value: https://medipass-api-aldrinjk.onrender.com
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /index.html
