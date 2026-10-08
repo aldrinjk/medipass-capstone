@@ -134,9 +134,8 @@ public class HapiFhirClinicalService implements ClinicalService {
     @Override
     public void deleteAllergy(UUID userId, UUID allergyId) {
         withFhirVoid(() -> {
-            Patient patient = findOrCreatePatient(userId);
             AllergyIntolerance resource = findOwnedResource(
-                    "AllergyIntolerance", allergyId, AllergyIntolerance.class, patient
+                    "AllergyIntolerance", allergyId, AllergyIntolerance.class, userId
             );
             client.delete().resourceById(resource.getIdElement()).execute();
         });
@@ -186,9 +185,8 @@ public class HapiFhirClinicalService implements ClinicalService {
     @Override
     public void deleteMedication(UUID userId, UUID medicationId) {
         withFhirVoid(() -> {
-            Patient patient = findOrCreatePatient(userId);
             MedicationStatement resource = findOwnedResource(
-                    "MedicationStatement", medicationId, MedicationStatement.class, patient
+                    "MedicationStatement", medicationId, MedicationStatement.class, userId
             );
             client.delete().resourceById(resource.getIdElement()).execute();
         });
@@ -237,8 +235,9 @@ public class HapiFhirClinicalService implements ClinicalService {
     @Override
     public void deleteCondition(UUID userId, UUID conditionId) {
         withFhirVoid(() -> {
-            Patient patient = findOrCreatePatient(userId);
-            Condition resource = findOwnedResource("Condition", conditionId, Condition.class, patient);
+            Condition resource = findOwnedResource(
+                    "Condition", conditionId, Condition.class, userId
+            );
             client.delete().resourceById(resource.getIdElement()).execute();
         });
     }
