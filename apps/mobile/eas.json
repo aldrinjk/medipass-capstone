@@ -9,7 +9,14 @@
       "distribution": "internal"
     },
     "preview": {
-      "distribution": "internal"
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_BASE_URL": "https://medipass-api-aldrinjk.onrender.com",
+        "EXPO_PUBLIC_USE_MOCKS": "false"
+      }
     },
     "production": {
       "autoIncrement": true
