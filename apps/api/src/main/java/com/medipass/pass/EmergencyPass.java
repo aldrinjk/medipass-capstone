@@ -49,7 +49,7 @@ public class EmergencyPass {
     @Column(name = "updated_at", nullable = false, insertable = false)
     private Instant updatedAt;
 
-    @ElementCollection(fetch = FetchType.LAZY)
+    @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(
             name = "emergency_pass_scope",
             joinColumns = @JoinColumn(name = "pass_id")
