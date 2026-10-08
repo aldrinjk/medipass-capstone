@@ -12,6 +12,7 @@ import android.graphics.Typeface;
 import android.os.Build;
 import android.os.Bundle;
 import android.telephony.SmsManager;
+import android.telephony.SubscriptionManager;
 import android.text.InputType;
 import android.view.Gravity;
 import android.view.WindowManager;
@@ -372,7 +373,22 @@ public class MainActivity extends Activity {
                     flags
             );
 
-            SmsManager.getDefault().sendTextMessage(
+            int subscriptionId = SubscriptionManager.getDefaultSmsSubscriptionId();
+            if (subscriptionId == SubscriptionManager.INVALID_SUBSCRIPTION_ID) {
+                throw new IllegalStateException(
+                        "No default SMS subscription is selected."
+                );
+            }
+
+            SmsManager smsManager;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                smsManager = getSystemService(SmsManager.class)
+                        .createForSubscriptionId(subscriptionId);
+            } else {
+                smsManager = SmsManager.getSmsManagerForSubscriptionId(subscriptionId);
+            }
+
+            smsManager.sendTextMessage(
                     job.destinationE164,
                     null,
                     job.message,
