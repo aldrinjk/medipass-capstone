@@ -93,24 +93,26 @@ public class HapiFhirClinicalService implements ClinicalService {
 
     @Override
     public List<AllergyDto> getAllergies(UUID userId) {
-        return withFhir(() -> {
-            Patient patient = findOrCreatePatient(userId);
-            return searchByPatient("AllergyIntolerance", patientId(patient), AllergyIntolerance.class)
-                    .stream()
-                    .map(this::toAllergyDto)
-                    .toList();
-        });
+        return withFhir(() ->
+                searchByPatient(
+                        "AllergyIntolerance",
+                        patientLogicalId(userId),
+                        AllergyIntolerance.class
+                )
+                        .stream()
+                        .map(this::toAllergyDto)
+                        .toList()
+        );
     }
 
     @Override
     public AllergyDto createAllergy(UUID userId, AllergyRequest request) {
         return withFhir(() -> {
-            Patient patient = findOrCreatePatient(userId);
             UUID appId = UUID.randomUUID();
             AllergyIntolerance resource = new AllergyIntolerance();
             resource.setId(logicalResourceId("AllergyIntolerance", appId));
             resource.addIdentifier(appIdentifier(appId));
-            resource.setPatient(patientReference(patient));
+            resource.setPatient(patientReference(userId));
             applyAllergy(resource, request);
             update(resource);
             return toAllergyDto(resource);
@@ -120,9 +122,8 @@ public class HapiFhirClinicalService implements ClinicalService {
     @Override
     public AllergyDto updateAllergy(UUID userId, UUID allergyId, AllergyRequest request) {
         return withFhir(() -> {
-            Patient patient = findOrCreatePatient(userId);
             AllergyIntolerance resource = findOwnedResource(
-                    "AllergyIntolerance", allergyId, AllergyIntolerance.class, patient
+                    "AllergyIntolerance", allergyId, AllergyIntolerance.class, userId
             );
             applyAllergy(resource, request);
             update(resource);
@@ -133,9 +134,8 @@ public class HapiFhirClinicalService implements ClinicalService {
     @Override
     public void deleteAllergy(UUID userId, UUID allergyId) {
         withFhirVoid(() -> {
-            Patient patient = findOrCreatePatient(userId);
             AllergyIntolerance resource = findOwnedResource(
-                    "AllergyIntolerance", allergyId, AllergyIntolerance.class, patient
+                    "AllergyIntolerance", allergyId, AllergyIntolerance.class, userId
             );
             client.delete().resourceById(resource.getIdElement()).execute();
         });
@@ -143,24 +143,26 @@ public class HapiFhirClinicalService implements ClinicalService {
 
     @Override
     public List<MedicationDto> getMedications(UUID userId) {
-        return withFhir(() -> {
-            Patient patient = findOrCreatePatient(userId);
-            return searchByPatient("MedicationStatement", patientId(patient), MedicationStatement.class)
-                    .stream()
-                    .map(this::toMedicationDto)
-                    .toList();
-        });
+        return withFhir(() ->
+                searchByPatient(
+                        "MedicationStatement",
+                        patientLogicalId(userId),
+                        MedicationStatement.class
+                )
+                        .stream()
+                        .map(this::toMedicationDto)
+                        .toList()
+        );
     }
 
     @Override
     public MedicationDto createMedication(UUID userId, MedicationRequest request) {
         return withFhir(() -> {
-            Patient patient = findOrCreatePatient(userId);
             UUID appId = UUID.randomUUID();
             MedicationStatement resource = new MedicationStatement();
             resource.setId(logicalResourceId("MedicationStatement", appId));
             resource.addIdentifier(appIdentifier(appId));
-            resource.setSubject(patientReference(patient));
+            resource.setSubject(patientReference(userId));
             resource.setStatus(MedicationStatement.MedicationStatementStatus.ACTIVE);
             applyMedication(resource, request);
             update(resource);
@@ -171,9 +173,8 @@ public class HapiFhirClinicalService implements ClinicalService {
     @Override
     public MedicationDto updateMedication(UUID userId, UUID medicationId, MedicationRequest request) {
         return withFhir(() -> {
-            Patient patient = findOrCreatePatient(userId);
             MedicationStatement resource = findOwnedResource(
-                    "MedicationStatement", medicationId, MedicationStatement.class, patient
+                    "MedicationStatement", medicationId, MedicationStatement.class, userId
             );
             applyMedication(resource, request);
             update(resource);
@@ -184,9 +185,8 @@ public class HapiFhirClinicalService implements ClinicalService {
     @Override
     public void deleteMedication(UUID userId, UUID medicationId) {
         withFhirVoid(() -> {
-            Patient patient = findOrCreatePatient(userId);
             MedicationStatement resource = findOwnedResource(
-                    "MedicationStatement", medicationId, MedicationStatement.class, patient
+                    "MedicationStatement", medicationId, MedicationStatement.class, userId
             );
             client.delete().resourceById(resource.getIdElement()).execute();
         });
@@ -194,24 +194,26 @@ public class HapiFhirClinicalService implements ClinicalService {
 
     @Override
     public List<ConditionDto> getConditions(UUID userId) {
-        return withFhir(() -> {
-            Patient patient = findOrCreatePatient(userId);
-            return searchByPatient("Condition", patientId(patient), Condition.class)
-                    .stream()
-                    .map(this::toConditionDto)
-                    .toList();
-        });
+        return withFhir(() ->
+                searchByPatient(
+                        "Condition",
+                        patientLogicalId(userId),
+                        Condition.class
+                )
+                        .stream()
+                        .map(this::toConditionDto)
+                        .toList()
+        );
     }
 
     @Override
     public ConditionDto createCondition(UUID userId, ConditionRequest request) {
         return withFhir(() -> {
-            Patient patient = findOrCreatePatient(userId);
             UUID appId = UUID.randomUUID();
             Condition resource = new Condition();
             resource.setId(logicalResourceId("Condition", appId));
             resource.addIdentifier(appIdentifier(appId));
-            resource.setSubject(patientReference(patient));
+            resource.setSubject(patientReference(userId));
             applyCondition(resource, request);
             update(resource);
             return toConditionDto(resource);
@@ -221,8 +223,9 @@ public class HapiFhirClinicalService implements ClinicalService {
     @Override
     public ConditionDto updateCondition(UUID userId, UUID conditionId, ConditionRequest request) {
         return withFhir(() -> {
-            Patient patient = findOrCreatePatient(userId);
-            Condition resource = findOwnedResource("Condition", conditionId, Condition.class, patient);
+            Condition resource = findOwnedResource(
+                    "Condition", conditionId, Condition.class, userId
+            );
             applyCondition(resource, request);
             update(resource);
             return toConditionDto(resource);
@@ -232,8 +235,9 @@ public class HapiFhirClinicalService implements ClinicalService {
     @Override
     public void deleteCondition(UUID userId, UUID conditionId) {
         withFhirVoid(() -> {
-            Patient patient = findOrCreatePatient(userId);
-            Condition resource = findOwnedResource("Condition", conditionId, Condition.class, patient);
+            Condition resource = findOwnedResource(
+                    "Condition", conditionId, Condition.class, userId
+            );
             client.delete().resourceById(resource.getIdElement()).execute();
         });
     }
@@ -313,7 +317,7 @@ public class HapiFhirClinicalService implements ClinicalService {
     }
 
     private Patient findOrCreatePatient(UUID userId) {
-        String logicalId = "patient-" + userId;
+        String logicalId = patientLogicalId(userId);
         try {
             return client.read()
                     .resource(Patient.class)
@@ -521,7 +525,7 @@ public class HapiFhirClinicalService implements ClinicalService {
             String resourceType,
             UUID appId,
             Class<T> type,
-            Patient patient
+            UUID userId
     ) {
         try {
             T resource = client.read()
@@ -529,7 +533,7 @@ public class HapiFhirClinicalService implements ClinicalService {
                     .withId(logicalResourceId(resourceType, appId))
                     .execute();
 
-            if (!patientId(patient).equals(referencedPatientId(resource))) {
+            if (!patientLogicalId(userId).equals(referencedPatientId(resource))) {
                 throw new ClinicalResourceNotFoundException(resourceType + " not found.");
             }
             return resource;
@@ -586,8 +590,12 @@ public class HapiFhirClinicalService implements ClinicalService {
         client.update().resource(resource).execute();
     }
 
-    private Reference patientReference(Patient patient) {
-        return new Reference("Patient/" + patientId(patient));
+    private Reference patientReference(UUID userId) {
+        return new Reference("Patient/" + patientLogicalId(userId));
+    }
+
+    private String patientLogicalId(UUID userId) {
+        return "patient-" + userId;
     }
 
     private String patientId(Patient patient) {

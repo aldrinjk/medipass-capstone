@@ -22,9 +22,10 @@ export function useMedications() {
   }, []);
 
   const createMedication = async (input: MedicationInput): Promise<boolean> => {
+    setError(null);
     try {
-      await medicationService.createMedication(input);
-      await loadMedications();
+      const created = await medicationService.createMedication(input);
+      setMedications((current) => [...current, created]);
       return true;
     } catch (err) {
       setError(getErrorMessage(err));
@@ -33,9 +34,12 @@ export function useMedications() {
   };
 
   const updateMedication = async (id: string, input: MedicationInput): Promise<boolean> => {
+    setError(null);
     try {
-      await medicationService.updateMedication(id, input);
-      await loadMedications();
+      const updated = await medicationService.updateMedication(id, input);
+      setMedications((current) =>
+        current.map((medication) => (medication.id === id ? updated : medication))
+      );
       return true;
     } catch (err) {
       setError(getErrorMessage(err));
@@ -44,9 +48,10 @@ export function useMedications() {
   };
 
   const deleteMedication = async (id: string): Promise<boolean> => {
+    setError(null);
     try {
       await medicationService.deleteMedication(id);
-      await loadMedications();
+      setMedications((current) => current.filter((medication) => medication.id !== id));
       return true;
     } catch (err) {
       setError(getErrorMessage(err));

@@ -22,9 +22,10 @@ export function useAllergies() {
   }, []);
 
   const createAllergy = async (input: AllergyInput): Promise<boolean> => {
+    setError(null);
     try {
-      await allergyService.createAllergy(input);
-      await loadAllergies();
+      const created = await allergyService.createAllergy(input);
+      setAllergies((current) => [...current, created]);
       return true;
     } catch (err) {
       setError(getErrorMessage(err));
@@ -33,9 +34,12 @@ export function useAllergies() {
   };
 
   const updateAllergy = async (id: string, input: AllergyInput): Promise<boolean> => {
+    setError(null);
     try {
-      await allergyService.updateAllergy(id, input);
-      await loadAllergies();
+      const updated = await allergyService.updateAllergy(id, input);
+      setAllergies((current) =>
+        current.map((allergy) => (allergy.id === id ? updated : allergy))
+      );
       return true;
     } catch (err) {
       setError(getErrorMessage(err));
@@ -44,9 +48,10 @@ export function useAllergies() {
   };
 
   const deleteAllergy = async (id: string): Promise<boolean> => {
+    setError(null);
     try {
       await allergyService.deleteAllergy(id);
-      await loadAllergies();
+      setAllergies((current) => current.filter((allergy) => allergy.id !== id));
       return true;
     } catch (err) {
       setError(getErrorMessage(err));

@@ -22,9 +22,10 @@ export function useConditions() {
   }, []);
 
   const createCondition = async (input: ConditionInput): Promise<boolean> => {
+    setError(null);
     try {
-      await conditionService.createCondition(input);
-      await loadConditions();
+      const created = await conditionService.createCondition(input);
+      setConditions((current) => [...current, created]);
       return true;
     } catch (err) {
       setError(getErrorMessage(err));
@@ -33,9 +34,12 @@ export function useConditions() {
   };
 
   const updateCondition = async (id: string, input: ConditionInput): Promise<boolean> => {
+    setError(null);
     try {
-      await conditionService.updateCondition(id, input);
-      await loadConditions();
+      const updated = await conditionService.updateCondition(id, input);
+      setConditions((current) =>
+        current.map((condition) => (condition.id === id ? updated : condition))
+      );
       return true;
     } catch (err) {
       setError(getErrorMessage(err));
@@ -44,9 +48,10 @@ export function useConditions() {
   };
 
   const deleteCondition = async (id: string): Promise<boolean> => {
+    setError(null);
     try {
       await conditionService.deleteCondition(id);
-      await loadConditions();
+      setConditions((current) => current.filter((condition) => condition.id !== id));
       return true;
     } catch (err) {
       setError(getErrorMessage(err));
