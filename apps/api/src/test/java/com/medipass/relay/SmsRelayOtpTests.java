@@ -46,7 +46,7 @@ class SmsRelayOtpTests {
 
     private static final String RELAY_KEY = "test-relay-shared-key-0123456789abcdef";
     private static final Pattern OTP_PATTERN =
-            Pattern.compile("MediPass verification code: (\\d{6})");
+            Pattern.compile("MediPass: (\\d{6})");
 
     @Autowired
     private MockMvc mockMvc;
