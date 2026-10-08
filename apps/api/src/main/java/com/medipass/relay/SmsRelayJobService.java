@@ -63,8 +63,7 @@ public class SmsRelayJobService {
         maintenance();
 
         String code = "%06d".formatted(secureRandom.nextInt(1_000_000));
-        String message = "MediPass verification code: " + code
-                + ". This code expires shortly. Do not share it.";
+        String message = "MediPass: " + code;
 
         repository.saveAndFlush(SmsRelayJob.pending(
                 challengeId,
