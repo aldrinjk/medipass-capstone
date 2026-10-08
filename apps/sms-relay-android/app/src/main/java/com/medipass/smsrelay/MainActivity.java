@@ -2,7 +2,6 @@ package com.medipass.smsrelay;
 
 import android.Manifest;
 import android.app.Activity;
-import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -11,42 +10,18 @@ import android.content.pm.PackageManager;
 import android.graphics.Typeface;
 import android.os.Build;
 import android.os.Bundle;
-import android.telephony.SmsManager;
-import android.telephony.SubscriptionManager;
 import android.text.InputType;
-import android.view.Gravity;
-import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
-import org.json.JSONObject;
-
-import java.io.BufferedReader;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
-
 public class MainActivity extends Activity {
 
     private static final int SMS_PERMISSION_REQUEST = 7001;
-    private static final String ACTION_SMS_SENT =
-            "com.medipass.smsrelay.SMS_SENT";
-
-    private final ExecutorService networkExecutor =
-            Executors.newSingleThreadExecutor();
-    private final ScheduledExecutorService pollExecutor =
-            Executors.newSingleThreadScheduledExecutor();
+    private static final String PUBLIC_API_URL =
+            "https://medipass-api-aldrinjk.onrender.com";
 
     private EditText apiUrlInput;
     private EditText relayKeyInput;
@@ -54,64 +29,54 @@ public class MainActivity extends Activity {
     private TextView lastSmsText;
     private Button startButton;
 
-    private volatile boolean relayActive;
-    private volatile RelayJob currentJob;
-    private ScheduledFuture<?> pollFuture;
-
-    private String apiBaseUrl;
-    private String relayKey;
     private boolean startAfterPermissionGrant;
+    private String pendingUrl;
+    private String pendingKey;
+    private boolean statusReceiverRegistered;
 
-    private final BroadcastReceiver smsSentReceiver = new BroadcastReceiver() {
+    private final BroadcastReceiver statusReceiver =
+            new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            RelayJob job = currentJob;
-            if (job == null) {
-                return;
+            String status = intent.getStringExtra(
+                    RelayService.EXTRA_STATUS
+            );
+            String lastSms = intent.getStringExtra(
+                    RelayService.EXTRA_LAST_SMS
+            );
+
+            if (status != null) {
+                statusText.setText(status);
+            }
+            if (lastSms != null) {
+                lastSmsText.setText(lastSms);
             }
 
-            String jobId = intent.getStringExtra("jobId");
-            if (jobId == null || !job.jobId.equals(jobId)) {
-                return;
-            }
-
-            int resultCode = getResultCode();
-            if (resultCode == Activity.RESULT_OK) {
-                updateStatus("SMS sent. Confirming delivery with MediPass…");
-                networkExecutor.submit(() -> acknowledgeSent(job));
-            } else {
-                int modemErrorCode = intent.getIntExtra("errorCode", Integer.MIN_VALUE);
-                String error = "Android SMS send failed: "
-                        + smsResultDescription(resultCode)
-                        + " (result=" + resultCode
-                        + (modemErrorCode == Integer.MIN_VALUE
-                            ? ""
-                            : ", modemError=" + modemErrorCode)
-                        + ")";
-                updateStatus(error);
-                networkExecutor.submit(() -> acknowledgeFailed(job, error));
-            }
+            refreshControls();
         }
     };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        registerSmsSentReceiver();
         setContentView(buildUi());
+        refreshFromService();
     }
 
     @Override
-    protected void onDestroy() {
-        stopRelay();
-        try {
-            unregisterReceiver(smsSentReceiver);
-        } catch (IllegalArgumentException ignored) {
-            // Receiver was already unregistered.
+    protected void onStart() {
+        super.onStart();
+        registerStatusReceiver();
+        refreshFromService();
+    }
+
+    @Override
+    protected void onStop() {
+        if (statusReceiverRegistered) {
+            unregisterReceiver(statusReceiver);
+            statusReceiverRegistered = false;
         }
-        networkExecutor.shutdownNow();
-        pollExecutor.shutdownNow();
-        super.onDestroy();
+        super.onStop();
     }
 
     private ScrollView buildUi() {
@@ -129,8 +94,9 @@ public class MainActivity extends Activity {
 
         TextView subtitle = new TextView(this);
         subtitle.setText(
-                "Foreground-only capstone relay. This phone sends responder OTPs "
-                        + "through its SIM and never receives patient clinical data."
+                "Background capstone relay. Once connected, you can "
+                        + "switch to the MediPass patient app on this same "
+                        + "phone while the relay keeps sending responder OTPs."
         );
         subtitle.setTextSize(15);
         subtitle.setPadding(0, dp(8), 0, dp(22));
@@ -138,16 +104,19 @@ public class MainActivity extends Activity {
 
         content.addView(label("MediPass API URL"));
         apiUrlInput = new EditText(this);
-        apiUrlInput.setHint("http://192.168.1.50:8080");
+        apiUrlInput.setText(PUBLIC_API_URL);
         apiUrlInput.setSingleLine(true);
         apiUrlInput.setInputType(
-                InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI
+                InputType.TYPE_CLASS_TEXT
+                        | InputType.TYPE_TEXT_VARIATION_URI
         );
         content.addView(apiUrlInput);
 
         content.addView(label("Relay key"));
         relayKeyInput = new EditText(this);
-        relayKeyInput.setHint("Enter the same SMS_RELAY_SHARED_KEY used by the API");
+        relayKeyInput.setHint(
+                "Enter the same SMS_RELAY_SHARED_KEY used by the API"
+        );
         relayKeyInput.setSingleLine(true);
         relayKeyInput.setInputType(
                 InputType.TYPE_CLASS_TEXT
@@ -157,7 +126,8 @@ public class MainActivity extends Activity {
 
         TextView keyNote = new TextView(this);
         keyNote.setText(
-                "The relay key stays in app memory only and is not saved to device storage."
+                "The relay key stays in memory only and is not saved "
+                        + "to device storage."
         );
         keyNote.setTextSize(12);
         keyNote.setPadding(0, dp(4), 0, dp(18));
@@ -166,7 +136,7 @@ public class MainActivity extends Activity {
         startButton = new Button(this);
         startButton.setText("Start Relay");
         startButton.setOnClickListener(view -> {
-            if (relayActive) {
+            if (RelayService.isRunning()) {
                 stopRelay();
             } else {
                 beginRelayStart();
@@ -185,11 +155,12 @@ public class MainActivity extends Activity {
         statusText.setPadding(0, dp(6), 0, dp(18));
         content.addView(statusText);
 
-        TextView lastLabel = label("Last SMS");
-        content.addView(lastLabel);
+        content.addView(label("Last SMS"));
 
         lastSmsText = new TextView(this);
-        lastSmsText.setText("No SMS has been sent in this session.");
+        lastSmsText.setText(
+                "No SMS has been sent in this session."
+        );
         lastSmsText.setTextSize(15);
         lastSmsText.setPadding(0, dp(6), 0, dp(22));
         content.addView(lastSmsText);
@@ -197,11 +168,12 @@ public class MainActivity extends Activity {
         TextView instructions = new TextView(this);
         instructions.setText(
                 "Demo checklist:\n"
-                        + "• Keep this app open while testing.\n"
-                        + "• Keep the Android phone online.\n"
+                        + "• Tap Start Relay and wait for Connected ✓.\n"
+                        + "• You may then switch to MediPass Patient.\n"
+                        + "• Keep this phone online.\n"
                         + "• Make sure its SIM can send SMS.\n"
                         + "• On dual-SIM phones, select a default SMS SIM.\n"
-                        + "• The responder can receive the OTP on Android or iPhone."
+                        + "• Do not force-stop the relay app during the demo."
         );
         instructions.setTextSize(14);
         content.addView(instructions);
@@ -221,6 +193,24 @@ public class MainActivity extends Activity {
     }
 
     private void beginRelayStart() {
+        pendingUrl = apiUrlInput.getText().toString().trim();
+        pendingKey = relayKeyInput.getText().toString();
+
+        if (!pendingUrl.startsWith("http://")
+                && !pendingUrl.startsWith("https://")) {
+            statusText.setText(
+                    "Enter an API URL beginning with http:// or https://"
+            );
+            return;
+        }
+
+        if (pendingKey.length() < 32) {
+            statusText.setText(
+                    "Relay key must be at least 32 characters."
+            );
+            return;
+        }
+
         if (checkSelfPermission(Manifest.permission.SEND_SMS)
                 != PackageManager.PERMISSION_GRANTED) {
             startAfterPermissionGrant = true;
@@ -231,370 +221,65 @@ public class MainActivity extends Activity {
             return;
         }
 
-        startRelayAfterValidation();
+        startRelayService(pendingUrl, pendingKey);
     }
 
-    private void startRelayAfterValidation() {
-        String rawUrl = apiUrlInput.getText().toString().trim();
-        String rawKey = relayKeyInput.getText().toString();
+    private void startRelayService(String url, String key) {
+        Intent intent = new Intent(this, RelayService.class)
+                .setAction(RelayService.ACTION_START)
+                .putExtra(RelayService.EXTRA_API_URL, url)
+                .putExtra(RelayService.EXTRA_RELAY_KEY, key);
 
-        if (!rawUrl.startsWith("http://") && !rawUrl.startsWith("https://")) {
-            updateStatus("Enter an API URL beginning with http:// or https://");
-            return;
-        }
-
-        if (rawKey.length() < 32) {
-            updateStatus("Relay key must be at least 32 characters.");
-            return;
-        }
-
-        apiBaseUrl = trimTrailingSlash(rawUrl);
-        relayKey = rawKey;
-
-        updateStatus("Checking MediPass connection…");
+        statusText.setText("Starting background relay…");
         startButton.setEnabled(false);
 
-        networkExecutor.submit(() -> {
-            try {
-                HttpResult result = request("GET", "/api/v1/relay/status", null);
-                if (result.statusCode != 200) {
-                    throw new IllegalStateException(
-                            "Relay status returned HTTP " + result.statusCode
-                    );
-                }
-
-                runOnUiThread(() -> {
-                    relayActive = true;
-                    apiUrlInput.setEnabled(false);
-                    relayKeyInput.setEnabled(false);
-                    startButton.setEnabled(true);
-                    startButton.setText("Stop Relay");
-                    getWindow().addFlags(
-                            WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
-                    );
-                    updateStatus("Connected ✓ Waiting for OTP requests");
-                    pollFuture = pollExecutor.scheduleWithFixedDelay(
-                            this::pollOnce,
-                            0,
-                            2,
-                            TimeUnit.SECONDS
-                    );
-                });
-            } catch (Exception ex) {
-                runOnUiThread(() -> {
-                    startButton.setEnabled(true);
-                    updateStatus("Connection failed: " + safeMessage(ex));
-                });
-            }
-        });
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(intent);
+        } else {
+            startService(intent);
+        }
     }
 
     private void stopRelay() {
-        relayActive = false;
-
-        if (pollFuture != null) {
-            pollFuture.cancel(true);
-            pollFuture = null;
-        }
-
-        currentJob = null;
-
-        if (startButton != null) {
-            runOnUiThread(() -> {
-                startButton.setText("Start Relay");
-                startButton.setEnabled(true);
-                apiUrlInput.setEnabled(true);
-                relayKeyInput.setEnabled(true);
-                updateStatus("Stopped");
-                getWindow().clearFlags(
-                        WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
-                );
-            });
-        }
+        stopService(new Intent(this, RelayService.class));
+        statusText.setText("Stopped");
+        refreshControls();
     }
 
-    private void pollOnce() {
-        if (!relayActive || currentJob != null) {
+    private void refreshFromService() {
+        statusText.setText(RelayService.getLastStatus());
+        lastSmsText.setText(RelayService.getLastSms());
+        refreshControls();
+    }
+
+    private void refreshControls() {
+        boolean running = RelayService.isRunning();
+
+        startButton.setEnabled(true);
+        startButton.setText(running ? "Stop Relay" : "Start Relay");
+        apiUrlInput.setEnabled(!running);
+        relayKeyInput.setEnabled(!running);
+    }
+
+    private void registerStatusReceiver() {
+        if (statusReceiverRegistered) {
             return;
         }
 
-        try {
-            HttpResult result = request(
-                    "POST",
-                    "/api/v1/relay/sms-jobs/claim",
-                    null
-            );
+        IntentFilter filter =
+                new IntentFilter(RelayService.ACTION_STATUS);
 
-            if (result.statusCode == 204) {
-                return;
-            }
-
-            if (result.statusCode != 200) {
-                updateStatus(
-                        "Relay polling error: HTTP " + result.statusCode
-                );
-                return;
-            }
-
-            JSONObject json = new JSONObject(result.body);
-            RelayJob job = new RelayJob(
-                    json.getString("jobId"),
-                    json.getString("destinationE164"),
-                    json.getString("message"),
-                    json.optInt("deliveryAttempt", 1)
-            );
-            currentJob = job;
-
-            updateStatus(
-                    "OTP job claimed for ••••"
-                            + lastFour(job.destinationE164)
-                            + " — sending SMS…"
-            );
-
-            runOnUiThread(() -> sendSms(job));
-        } catch (Exception ex) {
-            updateStatus("Relay polling error: " + safeMessage(ex));
-        }
-    }
-
-    @SuppressWarnings("deprecation")
-    private void sendSms(RelayJob job) {
-        if (!relayActive || currentJob != job) {
-            return;
-        }
-
-        try {
-            Intent sentIntent = new Intent(ACTION_SMS_SENT)
-                    .setPackage(getPackageName())
-                    .putExtra("jobId", job.jobId);
-
-            int flags = PendingIntent.FLAG_UPDATE_CURRENT;
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                flags |= PendingIntent.FLAG_IMMUTABLE;
-            }
-
-            PendingIntent sentPendingIntent = PendingIntent.getBroadcast(
-                    this,
-                    job.jobId.hashCode(),
-                    sentIntent,
-                    flags
-            );
-
-            int subscriptionId = SubscriptionManager.getDefaultSmsSubscriptionId();
-            if (subscriptionId == SubscriptionManager.INVALID_SUBSCRIPTION_ID) {
-                throw new IllegalStateException(
-                        "No default SMS subscription is selected."
-                );
-            }
-
-            SmsManager smsManager;
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                smsManager = getSystemService(SmsManager.class)
-                        .createForSubscriptionId(subscriptionId);
-            } else {
-                smsManager = SmsManager.getSmsManagerForSubscriptionId(subscriptionId);
-            }
-
-            smsManager.sendTextMessage(
-                    job.destinationE164,
-                    null,
-                    job.message,
-                    sentPendingIntent,
-                    null
-            );
-        } catch (Exception ex) {
-            String error = "Unable to send SMS: " + safeMessage(ex);
-            updateStatus(error);
-            networkExecutor.submit(() -> acknowledgeFailed(job, error));
-        }
-    }
-
-    private void acknowledgeSent(RelayJob job) {
-        try {
-            HttpResult result = request(
-                    "POST",
-                    "/api/v1/relay/sms-jobs/" + job.jobId + "/sent",
-                    null
-            );
-
-            if (result.statusCode != 204) {
-                throw new IllegalStateException(
-                        "MediPass acknowledgement returned HTTP "
-                                + result.statusCode
-                );
-            }
-
-            currentJob = null;
-            runOnUiThread(() -> {
-                lastSmsText.setText(
-                        "Sent ✓  Destination ••••"
-                                + lastFour(job.destinationE164)
-                                + "  · attempt "
-                                + job.deliveryAttempt
-                );
-                updateStatus("Connected ✓ Waiting for OTP requests");
-            });
-        } catch (Exception ex) {
-            updateStatus(
-                    "SMS was sent, but server acknowledgement failed. "
-                            + "Keep the app open and check the API connection: "
-                            + safeMessage(ex)
-            );
-        }
-    }
-
-    private void acknowledgeFailed(RelayJob job, String error) {
-        try {
-            JSONObject payload = new JSONObject();
-            payload.put("error", error);
-
-            request(
-                    "POST",
-                    "/api/v1/relay/sms-jobs/" + job.jobId + "/failed",
-                    payload.toString()
-            );
-        } catch (Exception ignored) {
-            // The backend releases stale claims so a temporary acknowledgement
-            // failure does not permanently lose the OTP job.
-        } finally {
-            currentJob = null;
-            runOnUiThread(() -> {
-                lastSmsText.setText(
-                        "Failed ✕  Destination ••••"
-                                + lastFour(job.destinationE164)
-                                + "  · "
-                                + error
-                );
-                updateStatus(error + " — waiting for retry.");
-            });
-        }
-    }
-
-    private String smsResultDescription(int resultCode) {
-        return switch (resultCode) {
-            case SmsManager.RESULT_ERROR_GENERIC_FAILURE -> "generic failure";
-            case SmsManager.RESULT_ERROR_RADIO_OFF -> "radio off";
-            case SmsManager.RESULT_ERROR_NULL_PDU -> "null PDU";
-            case SmsManager.RESULT_ERROR_NO_SERVICE -> "no service";
-            case SmsManager.RESULT_ERROR_LIMIT_EXCEEDED -> "SMS send limit exceeded";
-            case SmsManager.RESULT_ERROR_FDN_CHECK_FAILURE -> "FDN check failure";
-            case SmsManager.RESULT_ERROR_SHORT_CODE_NOT_ALLOWED -> "short code not allowed";
-            case SmsManager.RESULT_ERROR_SHORT_CODE_NEVER_ALLOWED -> "short code never allowed";
-            default -> "unknown error";
-        };
-    }
-
-    private HttpResult request(
-            String method,
-            String path,
-            String jsonBody
-    ) throws Exception {
-        URL url = new URL(apiBaseUrl + path);
-        HttpURLConnection connection =
-                (HttpURLConnection) url.openConnection();
-
-        connection.setRequestMethod(method);
-        connection.setConnectTimeout(7000);
-        connection.setReadTimeout(7000);
-        connection.setUseCaches(false);
-        connection.setRequestProperty("Accept", "application/json");
-        connection.setRequestProperty("X-MediPass-Relay-Key", relayKey);
-
-        if (jsonBody != null) {
-            byte[] bytes = jsonBody.getBytes(StandardCharsets.UTF_8);
-            connection.setDoOutput(true);
-            connection.setRequestProperty(
-                    "Content-Type",
-                    "application/json; charset=utf-8"
-            );
-            connection.setFixedLengthStreamingMode(bytes.length);
-            try (OutputStream output = connection.getOutputStream()) {
-                output.write(bytes);
-            }
-        } else if ("POST".equals(method)) {
-            connection.setDoOutput(true);
-            connection.setFixedLengthStreamingMode(0);
-            connection.getOutputStream().close();
-        }
-
-        int statusCode = connection.getResponseCode();
-        String body = readResponseBody(connection, statusCode);
-        connection.disconnect();
-
-        return new HttpResult(statusCode, body);
-    }
-
-    private String readResponseBody(
-            HttpURLConnection connection,
-            int statusCode
-    ) {
-        InputStream stream = null;
-        try {
-            stream = statusCode >= 400
-                    ? connection.getErrorStream()
-                    : connection.getInputStream();
-
-            if (stream == null) {
-                return "";
-            }
-
-            StringBuilder builder = new StringBuilder();
-            try (BufferedReader reader = new BufferedReader(
-                    new InputStreamReader(stream, StandardCharsets.UTF_8)
-            )) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    builder.append(line);
-                }
-            }
-            return builder.toString();
-        } catch (Exception ignored) {
-            return "";
-        }
-    }
-
-    private void registerSmsSentReceiver() {
-        IntentFilter filter = new IntentFilter(ACTION_SMS_SENT);
         if (Build.VERSION.SDK_INT >= 33) {
             registerReceiver(
-                    smsSentReceiver,
+                    statusReceiver,
                     filter,
                     Context.RECEIVER_NOT_EXPORTED
             );
         } else {
-            registerReceiver(smsSentReceiver, filter);
+            registerReceiver(statusReceiver, filter);
         }
-    }
 
-    private void updateStatus(String message) {
-        runOnUiThread(() -> {
-            if (statusText != null) {
-                statusText.setText(message);
-            }
-        });
-    }
-
-    private String trimTrailingSlash(String value) {
-        String result = value;
-        while (result.endsWith("/")) {
-            result = result.substring(0, result.length() - 1);
-        }
-        return result;
-    }
-
-    private String lastFour(String value) {
-        if (value == null || value.length() <= 4) {
-            return value == null ? "----" : value;
-        }
-        return value.substring(value.length() - 4);
-    }
-
-    private String safeMessage(Exception ex) {
-        String message = ex.getMessage();
-        if (message == null || message.isBlank()) {
-            return ex.getClass().getSimpleName();
-        }
-        return message;
+        statusReceiverRegistered = true;
     }
 
     private int dp(int value) {
@@ -620,30 +305,18 @@ public class MainActivity extends Activity {
         }
 
         boolean granted = grantResults.length > 0
-                && grantResults[0] == PackageManager.PERMISSION_GRANTED;
+                && grantResults[0]
+                == PackageManager.PERMISSION_GRANTED;
 
         if (granted && startAfterPermissionGrant) {
             startAfterPermissionGrant = false;
-            startRelayAfterValidation();
+            startRelayService(pendingUrl, pendingKey);
         } else {
             startAfterPermissionGrant = false;
-            updateStatus(
-                    "SMS permission is required for this phone to act as the relay."
+            statusText.setText(
+                    "SMS permission is required for this phone "
+                            + "to act as the relay."
             );
         }
-    }
-
-    private record RelayJob(
-            String jobId,
-            String destinationE164,
-            String message,
-            int deliveryAttempt
-    ) {
-    }
-
-    private record HttpResult(
-            int statusCode,
-            String body
-    ) {
     }
 }
