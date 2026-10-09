@@ -2,23 +2,42 @@
 
 **MediPass** is a patient-controlled QR-based emergency health passport. A patient maintains a small emergency profile, chooses which categories may be shared, creates a time-limited emergency pass, and displays its QR code in the MediPass mobile app. A responder scans the QR with a normal phone camera and opens a public browser page without installing MediPass or creating a patient account. Before clinical information is released, the responder completes phone verification or explicitly uses an unverified emergency override. The backend validates the token, expiry, revocation status, server-stored sharing scope, and responder session before returning only permitted emergency information. Public access is audited with responder accountability metadata and an `MP-...` trace code.
 
-## Locked architecture (Revision 2)
+## Final capstone architecture
 
-- **Patient app:** React Native + Expo + TypeScript
+- **Patient app:** React Native + Expo + TypeScript, distributed for the capstone as a standalone Android APK
 - **Navigation:** Expo Router
-- **Early demos:** Expo Go is allowed for quick supervisor demonstrations
-- **Long-term mobile development/testing:** Expo development builds / `expo-dev-client`
-- **Public responder viewer:** React + TypeScript + Vite website
+- **Public responder viewer:** React + TypeScript + Vite, served by a small Node SPA-fallback server
 - **API:** Java 21 + Spring Boot 3.x modular monolith
 - **Authentication:** Spring Security + JWT
 - **Application database:** Supabase-hosted PostgreSQL
 - **Application schema migrations:** Flyway
-- **Clinical interoperability:** HAPI FHIR JPA Server using HL7 FHIR R4
-- **Synthetic patient data:** Synthea
+- **Clinical interoperability:** HL7 FHIR R4 through HAPI FHIR; the deployed demo uses the public HAPI FHIR R4 test server and local/integration testing can run the repository's HAPI container
+- **Responder phone verification:** Android SMS Relay foreground-service app using the phone's SIM
+- **Synthetic patient data:** Synthea / fictional demo data only
+- **Hosting:** Render free-tier web services for the API and responder site
 - **Local supporting services:** Docker Compose
-- **CI:** GitHub Actions
+- **CI / APK builds:** GitHub Actions
 
 Supabase is used as managed PostgreSQL. It does **not** replace Spring Boot, Spring Security, Flyway, or the REST API. Mobile/web clients must never query the Supabase database directly and must never receive database credentials or a service-role key.
+
+## Current deployed demo
+
+The final capstone demo is internet-accessible and does not require the patient
+and responder phones to share a Wi-Fi network.
+
+- **API:** `https://medipass-api-aldrinjk.onrender.com`
+- **Responder:** `https://medipass-responder-web-aldrinjk.onrender.com`
+- **Patient app:** standalone Android APK produced by
+  `.github/workflows/mobile-apk.yml`, with the public API URL baked into the build
+- **SMS transport:** the separate MediPass Android SMS Relay polls the public API
+  and sends responder OTP messages through the relay phone's active SIM
+- **FHIR:** the public capstone deployment points to
+  `https://hapi.fhir.org/baseR4`; only synthetic/fictional data may be used
+
+The old Render static responder service
+`medipass-responder-aldrinjk.onrender.com` is not the supported QR target.
+The Node responder service above is required because it provides SPA fallback
+for direct `/passes/:token` links.
 
 ## High-level data flow
 
@@ -69,7 +88,7 @@ medipass-capstone/
 └── README.md
 ```
 
-When implementation begins, Flyway migrations belong in:
+Flyway migrations live in:
 
 ```text
 apps/api/src/main/resources/db/migration/
@@ -105,9 +124,16 @@ Key shared pass behavior:
 - Do not use Supabase client SDKs for direct application-table access from Expo or the responder website.
 - HAPI FHIR remains a separate clinical-data component and should not share the Flyway-managed application schema.
 
-## Expo rules
+## Mobile build and demo rules
 
-Expo Go is useful for quick early development demonstrations but is not the final runtime assumption. The project should remain compatible with Expo development builds so custom native dependencies can be added later without redesigning the application.
+The final patient demo build is a standalone Android APK. Expo Go may still be
+used for development, but it is not required by a recipient of the final APK.
+The APK talks to the public Render API over HTTPS and uses real server-side data
+when `EXPO_PUBLIC_USE_MOCKS=false`.
+
+The SMS Relay is a separate Android app and should only be installed/configured
+on the designated relay phone. Its shared key is never bundled into the patient
+APK or committed to the repository.
 
 ## Branch strategy
 
@@ -116,6 +142,8 @@ Expo Go is useful for quick early development demonstrations but is not the fina
 - `feature/*`: individual development branches
 - Feature PRs target `develop`
 - Tested release work moves from `develop` to `main`
+- Final release candidates require green CI plus the physical-device acceptance
+  checks in `docs/testing/demo-runbook.md`
 
 ## Data policy
 
