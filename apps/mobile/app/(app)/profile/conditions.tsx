@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -28,6 +28,7 @@ export default function ConditionsScreen() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCondition, setEditingCondition] = useState<Condition | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const submitLockRef = useRef(false);
 
   const handleOpenAdd = () => {
     setEditingCondition(null);
@@ -57,6 +58,11 @@ export default function ConditionsScreen() {
   };
 
   const handleModalSubmit = async (data: ConditionFormData): Promise<boolean> => {
+    if (submitLockRef.current) {
+      return false;
+    }
+
+    submitLockRef.current = true;
     setIsSubmitting(true);
     try {
       if (editingCondition) {
@@ -73,6 +79,7 @@ export default function ConditionsScreen() {
         });
       }
     } finally {
+      submitLockRef.current = false;
       setIsSubmitting(false);
     }
   };
