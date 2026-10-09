@@ -41,11 +41,13 @@ export const PassSummaryCard: React.FC<PassSummaryCardProps> = ({
   return (
     <Card>
       <View style={styles.header}>
-        <View>
+        <View style={styles.passInfo}>
           <Text style={styles.passIdLabel}>Pass Identifier</Text>
           <Text style={styles.passId}>{pass.passId}</Text>
         </View>
-        <Badge label={pass.status} variant={getBadgeVariant(pass.status)} />
+        <View style={styles.badgeWrap}>
+          <Badge label={pass.status} variant={getBadgeVariant(pass.status)} />
+        </View>
       </View>
 
       <View style={styles.detailRow}>
@@ -120,8 +122,17 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginBottom: 12,
+  },
+  passInfo: {
+    flex: 1,
+    minWidth: 0,
+    paddingRight: 12,
+  },
+  badgeWrap: {
+    flexShrink: 0,
+    alignSelf: 'flex-start',
   },
   passIdLabel: {
     fontSize: 12,
@@ -132,6 +143,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: '#111827',
+    flexShrink: 1,
+    flexWrap: 'wrap',
   },
   detailRow: {
     flexDirection: 'row',
