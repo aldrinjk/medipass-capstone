@@ -1,0 +1,329 @@
+package com.medipass.common.error;
+
+import com.medipass.audit.AccessLogNotFoundException;
+import com.medipass.auth.EmailAlreadyRegisteredException;
+import com.medipass.auth.InvalidCredentialsException;
+import com.medipass.auth.InvalidRefreshTokenException;
+import com.medipass.pass.PassLifecycleException;
+import com.medipass.pass.PassNotFoundException;
+import com.medipass.pass.PassStatus;
+import com.medipass.pass.PublicPassGoneException;
+import com.medipass.pass.PublicPassNotFoundException;
+import com.medipass.pass.ResponderVerificationException;
+import com.medipass.pass.ResponderVerificationRequiredException;
+import com.medipass.patient.ClinicalResourceNotFoundException;
+import com.medipass.patient.ClinicalServiceUnavailableException;
+import com.medipass.relay.SmsRelayAuthenticationException;
+import com.medipass.relay.SmsRelayJobNotFoundException;
+import com.medipass.relay.SmsRelayJobStateException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.ConstraintViolationException;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ApiError> handleValidation(
+            MethodArgumentNotValidException ex,
+            HttpServletRequest request
+    ) {
+        Map<String, String> errors = new LinkedHashMap<>();
+        ex.getBindingResult().getFieldErrors().forEach(error ->
+                errors.putIfAbsent(error.getField(), error.getDefaultMessage())
+        );
+
+        ApiError body = new ApiError(
+                java.time.Instant.now(),
+                HttpStatus.BAD_REQUEST.value(),
+                "VALIDATION_ERROR",
+                "Request validation failed.",
+                request.getRequestURI(),
+                errors
+        );
+
+        return ResponseEntity.badRequest().body(body);
+    }
+
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<ApiError> handleConstraintViolation(
+            ConstraintViolationException ex,
+            HttpServletRequest request
+    ) {
+        return ResponseEntity.badRequest().body(
+                ApiError.of(
+                        HttpStatus.BAD_REQUEST.value(),
+                        "VALIDATION_ERROR",
+                        "Request validation failed.",
+                        request.getRequestURI()
+                )
+        );
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiError> handleUnreadableRequestBody(
+            HttpMessageNotReadableException ex,
+            HttpServletRequest request
+    ) {
+        return ResponseEntity.badRequest().body(
+                ApiError.of(
+                        HttpStatus.BAD_REQUEST.value(),
+                        "INVALID_REQUEST_BODY",
+                        "Request body is malformed or unreadable.",
+                        request.getRequestURI()
+                )
+        );
+    }
+
+    @ExceptionHandler(EmailAlreadyRegisteredException.class)
+    public ResponseEntity<ApiError> handleEmailAlreadyRegistered(
+            EmailAlreadyRegisteredException ex,
+            HttpServletRequest request
+    ) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                ApiError.of(
+                        HttpStatus.CONFLICT.value(),
+                        "EMAIL_ALREADY_REGISTERED",
+                        ex.getMessage(),
+                        request.getRequestURI()
+                )
+        );
+    }
+
+    @ExceptionHandler(InvalidCredentialsException.class)
+    public ResponseEntity<ApiError> handleInvalidCredentials(
+            InvalidCredentialsException ex,
+            HttpServletRequest request
+    ) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
+                ApiError.of(
+                        HttpStatus.UNAUTHORIZED.value(),
+                        "INVALID_CREDENTIALS",
+                        ex.getMessage(),
+                        request.getRequestURI()
+                )
+        );
+    }
+
+    @ExceptionHandler(InvalidRefreshTokenException.class)
+    public ResponseEntity<ApiError> handleInvalidRefreshToken(
+            InvalidRefreshTokenException ex,
+            HttpServletRequest request
+    ) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
+                ApiError.of(
+                        HttpStatus.UNAUTHORIZED.value(),
+                        "INVALID_REFRESH_TOKEN",
+                        ex.getMessage(),
+                        request.getRequestURI()
+                )
+        );
+    }
+
+    @ExceptionHandler(ClinicalResourceNotFoundException.class)
+    public ResponseEntity<ApiError> handleClinicalResourceNotFound(
+            ClinicalResourceNotFoundException ex,
+            HttpServletRequest request
+    ) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                ApiError.of(
+                        HttpStatus.NOT_FOUND.value(),
+                        "CLINICAL_RESOURCE_NOT_FOUND",
+                        ex.getMessage(),
+                        request.getRequestURI()
+                )
+        );
+    }
+
+    @ExceptionHandler(ClinicalServiceUnavailableException.class)
+    public ResponseEntity<ApiError> handleClinicalServiceUnavailable(
+            ClinicalServiceUnavailableException ex,
+            HttpServletRequest request
+    ) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(
+                ApiError.of(
+                        HttpStatus.SERVICE_UNAVAILABLE.value(),
+                        "CLINICAL_SERVICE_UNAVAILABLE",
+                        ex.getMessage(),
+                        request.getRequestURI()
+                )
+        );
+    }
+
+    @ExceptionHandler(PassNotFoundException.class)
+    public ResponseEntity<ApiError> handlePassNotFound(
+            PassNotFoundException ex,
+            HttpServletRequest request
+    ) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                ApiError.of(
+                        HttpStatus.NOT_FOUND.value(),
+                        "PASS_NOT_FOUND",
+                        ex.getMessage(),
+                        request.getRequestURI()
+                )
+        );
+    }
+
+    @ExceptionHandler(PassLifecycleException.class)
+    public ResponseEntity<ApiError> handlePassLifecycle(
+            PassLifecycleException ex,
+            HttpServletRequest request
+    ) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                ApiError.of(
+                        HttpStatus.CONFLICT.value(),
+                        "PASS_LIFECYCLE_CONFLICT",
+                        ex.getMessage(),
+                        request.getRequestURI()
+                )
+        );
+    }
+
+    @ExceptionHandler(AccessLogNotFoundException.class)
+    public ResponseEntity<ApiError> handleAccessLogNotFound(
+            AccessLogNotFoundException ex,
+            HttpServletRequest request
+    ) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                ApiError.of(
+                        HttpStatus.NOT_FOUND.value(),
+                        "ACCESS_LOG_NOT_FOUND",
+                        ex.getMessage(),
+                        request.getRequestURI()
+                )
+        );
+    }
+
+    @ExceptionHandler(PublicPassNotFoundException.class)
+    public ResponseEntity<ApiError> handlePublicPassNotFound(
+            PublicPassNotFoundException ex,
+            HttpServletRequest request
+    ) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                ApiError.of(
+                        HttpStatus.NOT_FOUND.value(),
+                        "PUBLIC_PASS_NOT_FOUND",
+                        ex.getMessage(),
+                        request.getRequestURI()
+                )
+        );
+    }
+
+    @ExceptionHandler(PublicPassGoneException.class)
+    public ResponseEntity<ApiError> handlePublicPassGone(
+            PublicPassGoneException ex,
+            HttpServletRequest request
+    ) {
+        String code = ex.getPassStatus() == PassStatus.REVOKED
+                ? "PUBLIC_PASS_REVOKED"
+                : "PUBLIC_PASS_EXPIRED";
+
+        return ResponseEntity.status(HttpStatus.GONE).body(
+                ApiError.of(
+                        HttpStatus.GONE.value(),
+                        code,
+                        ex.getMessage(),
+                        request.getRequestURI()
+                )
+        );
+    }
+
+    @ExceptionHandler(ResponderVerificationRequiredException.class)
+    public ResponseEntity<ApiError> handleResponderVerificationRequired(
+            ResponderVerificationRequiredException ex,
+            HttpServletRequest request
+    ) {
+        return ResponseEntity.status(HttpStatus.PRECONDITION_REQUIRED).body(
+                ApiError.of(
+                        HttpStatus.PRECONDITION_REQUIRED.value(),
+                        "RESPONDER_VERIFICATION_REQUIRED",
+                        ex.getMessage(),
+                        request.getRequestURI()
+                )
+        );
+    }
+
+    @ExceptionHandler(ResponderVerificationException.class)
+    public ResponseEntity<ApiError> handleResponderVerification(
+            ResponderVerificationException ex,
+            HttpServletRequest request
+    ) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                ApiError.of(
+                        HttpStatus.BAD_REQUEST.value(),
+                        "RESPONDER_VERIFICATION_FAILED",
+                        ex.getMessage(),
+                        request.getRequestURI()
+                )
+        );
+    }
+
+    @ExceptionHandler(SmsRelayAuthenticationException.class)
+    public ResponseEntity<ApiError> handleSmsRelayAuthentication(
+            SmsRelayAuthenticationException ex,
+            HttpServletRequest request
+    ) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
+                ApiError.of(
+                        HttpStatus.UNAUTHORIZED.value(),
+                        "SMS_RELAY_UNAUTHORIZED",
+                        ex.getMessage(),
+                        request.getRequestURI()
+                )
+        );
+    }
+
+    @ExceptionHandler(SmsRelayJobNotFoundException.class)
+    public ResponseEntity<ApiError> handleSmsRelayJobNotFound(
+            SmsRelayJobNotFoundException ex,
+            HttpServletRequest request
+    ) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                ApiError.of(
+                        HttpStatus.NOT_FOUND.value(),
+                        "SMS_RELAY_JOB_NOT_FOUND",
+                        ex.getMessage(),
+                        request.getRequestURI()
+                )
+        );
+    }
+
+    @ExceptionHandler(SmsRelayJobStateException.class)
+    public ResponseEntity<ApiError> handleSmsRelayJobState(
+            SmsRelayJobStateException ex,
+            HttpServletRequest request
+    ) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                ApiError.of(
+                        HttpStatus.CONFLICT.value(),
+                        "SMS_RELAY_JOB_STATE_CONFLICT",
+                        ex.getMessage(),
+                        request.getRequestURI()
+                )
+        );
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ApiError> handleUnexpected(
+            Exception ex,
+            HttpServletRequest request
+    ) {
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                ApiError.of(
+                        HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                        "INTERNAL_ERROR",
+                        "An unexpected server error occurred.",
+                        request.getRequestURI()
+                )
+        );
+    }
+}

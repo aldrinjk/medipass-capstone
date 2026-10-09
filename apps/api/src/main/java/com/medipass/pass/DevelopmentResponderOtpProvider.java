@@ -1,0 +1,53 @@
+package com.medipass.pass;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.stereotype.Service;
+
+import java.util.UUID;
+
+@Service
+@ConditionalOnProperty(
+        name = "medipass.responder-verification.provider",
+        havingValue = "dev",
+        matchIfMissing = true
+)
+public class DevelopmentResponderOtpProvider implements ResponderOtpProvider {
+
+    private static final String VERIFICATION_NOTE =
+            "Development OTP simulation; no SMS was sent.";
+
+    private final String demoCode;
+
+    public DevelopmentResponderOtpProvider(
+            @Value("${medipass.responder-verification.demo-code:123456}") String demoCode
+    ) {
+        this.demoCode = demoCode;
+    }
+
+    @Override
+    public void start(UUID challengeId, String phoneE164) {
+        // Development-only provider. No SMS is sent. The code is returned to
+        // the responder web UI with an explicit development label.
+    }
+
+    @Override
+    public boolean verify(UUID challengeId, String phoneE164, String code) {
+        return demoCode.equals(code);
+    }
+
+    @Override
+    public String deliveryMode() {
+        return "DEVELOPMENT";
+    }
+
+    @Override
+    public String developmentCode() {
+        return demoCode;
+    }
+
+    @Override
+    public String verificationNote() {
+        return VERIFICATION_NOTE;
+    }
+}

@@ -68,6 +68,11 @@ paths:
     post:
       tags: [Pass]
       security: [{bearerAuth: []}]
+      description: >
+        Creates a new emergency pass. The patient's server-stored sharing
+        preferences are authoritative at issuance time. The categories sent by
+        the client are retained in the request contract for compatibility but
+        cannot enable a category that is disabled in the stored preferences.
       requestBody:
         required: true
         content:
@@ -91,25 +96,117 @@ paths:
     parameters: [{name: token, in: path, required: true, schema: {type: string}}]
     get:
       tags: [Public]
+      description: >
+        Returns patient-authorized emergency data only after a short-lived responder
+        verification session has been established. PHONE_OTP verifies control of the
+        supplied phone number; responder name, role, and organization remain self-declared.
+      parameters:
+        - name: X-MediPass-Verification
+          in: header
+          required: false
+          schema: {type: string}
+          description: Opaque short-lived responder verification token returned by confirm or emergency-override.
       responses:
-        "200": {description: Filtered emergency summary}
+        "200":
+          description: Filtered emergency summary with responder accountability, server-generated trace code, and browser-visible device label
+          content: {application/json: {schema: {$ref: '#/components/schemas/PublicPassResponse'}}}
+        "404": {description: Invalid pass}
+        "410": {description: Revoked or expired pass}
+        "428": {description: Active pass requires responder verification before clinical data is released}
+  /api/v1/public/passes/{token}/verification/start:
+    parameters: [{name: token, in: path, required: true, schema: {type: string}}]
+    post:
+      tags: [Public]
+      description: Starts phone verification for a responder. No clinical information is returned.
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/ResponderVerificationStartRequest'}}}
+      responses:
+        "200": {description: Verification challenge created, content: {application/json: {schema: {$ref: '#/components/schemas/ResponderVerificationStartResponse'}}}}
+        "400": {description: Invalid responder details or OTP provider error}
+        "404": {description: Invalid pass}
+        "410": {description: Revoked or expired pass}
+  /api/v1/public/passes/{token}/verification/confirm:
+    parameters: [{name: token, in: path, required: true, schema: {type: string}}]
+    post:
+      tags: [Public]
+      description: Confirms phone control and returns an opaque short-lived responder verification token.
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/ResponderVerificationConfirmRequest'}}}
+      responses:
+        "200": {description: Phone verification completed, content: {application/json: {schema: {$ref: '#/components/schemas/ResponderVerificationSessionResponse'}}}}
+        "400": {description: Incorrect or expired verification challenge}
+        "404": {description: Invalid pass}
+        "410": {description: Revoked or expired pass}
+  /api/v1/public/passes/{token}/verification/emergency-override:
+    parameters: [{name: token, in: path, required: true, schema: {type: string}}]
+    post:
+      tags: [Public]
+      description: >
+        Creates a short-lived unverified emergency session when phone verification
+        cannot be completed. The self-declared responder identity and reason are audited.
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/ResponderEmergencyOverrideRequest'}}}
+      responses:
+        "200": {description: Unverified emergency session created, content: {application/json: {schema: {$ref: '#/components/schemas/ResponderVerificationSessionResponse'}}}}
+        "400": {description: Invalid responder details}
         "404": {description: Invalid pass}
         "410": {description: Revoked or expired pass}
   /api/v1/patients/me/access-logs:
-    get: {tags: [Audit], security: [{bearerAuth: []}], responses: {"200": {description: Access history}}}
+    get:
+      tags: [Audit]
+      security: [{bearerAuth: []}]
+      responses:
+        "200":
+          description: Patient-visible access history
+          content: {application/json: {schema: {type: array, items: {$ref: '#/components/schemas/AccessLogResponse'}}}}
   /api/v1/patients/me/access-logs/{id}:
     parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
-    get: {tags: [Audit], security: [{bearerAuth: []}], responses: {"200": {description: Access detail}}}
+    get:
+      tags: [Audit]
+      security: [{bearerAuth: []}]
+      responses:
+        "200": {description: Patient-visible access detail, content: {application/json: {schema: {$ref: '#/components/schemas/AccessLogResponse'}}}}
+        "404": {description: Access record not found for the authenticated patient}
   /api/v1/patients/me/fhir-bundle:
     get: {tags: [FHIR], security: [{bearerAuth: []}], responses: {"200": {description: FHIR R4 emergency Bundle}}}
   /api/v1/admin/metrics:
-    get: {tags: [Admin], security: [{bearerAuth: []}], responses: {"200": {description: Metrics}}}
+    get:
+      tags: [Admin]
+      security: [{bearerAuth: []}]
+      responses:
+        "200": {description: Metrics, content: {application/json: {schema: {$ref: '#/components/schemas/AdminMetricsResponse'}}}}
+        "403": {description: Caller is authenticated but not an admin}
   /api/v1/admin/passes:
-    get: {tags: [Admin], security: [{bearerAuth: []}], responses: {"200": {description: Search passes}}}
+    get:
+      tags: [Admin]
+      security: [{bearerAuth: []}]
+      parameters:
+        - {name: status, in: query, required: false, schema: {$ref: '#/components/schemas/PassStatus'}}
+      responses:
+        "200": {description: Search passes, content: {application/json: {schema: {type: array, items: {$ref: '#/components/schemas/AdminPassSummaryResponse'}}}}}
+        "403": {description: Caller is authenticated but not an admin}
   /api/v1/admin/access-logs:
-    get: {tags: [Admin], security: [{bearerAuth: []}], responses: {"200": {description: Search access logs}}}
+    get:
+      tags: [Admin]
+      security: [{bearerAuth: []}]
+      parameters:
+        - {name: outcome, in: query, required: false, schema: {$ref: '#/components/schemas/AccessOutcome'}}
+      responses:
+        "200": {description: Search access logs, content: {application/json: {schema: {type: array, items: {$ref: '#/components/schemas/AdminAccessLogResponse'}}}}}
+        "403": {description: Caller is authenticated but not an admin}
   /api/v1/admin/synthea/import:
-    post: {tags: [FHIR, Admin], security: [{bearerAuth: []}], responses: {"201": {description: Synthetic data imported}}}
+    post:
+      tags: [FHIR, Admin]
+      security: [{bearerAuth: []}]
+      description: >
+        Accepts synthetic FHIR R4 data as a Bundle, bare array, or single resource and
+        persists it to the configured HAPI FHIR server. Real patient data is prohibited.
+      responses:
+        "201": {description: Synthetic data imported, content: {application/json: {schema: {$ref: '#/components/schemas/SyntheaImportResponse'}}}}
+        "403": {description: Caller is authenticated but not an admin}
 components:
   securitySchemes:
     bearerAuth:
@@ -124,6 +221,10 @@ components:
         categories:
           type: array
           uniqueItems: true
+          description: >
+            Client snapshot of selected categories. The server re-reads the
+            authenticated patient's stored sharing preferences and uses those
+            values as the authoritative scope for the new pass.
           items: {$ref: '#/components/schemas/ShareCategory'}
         expiresAt: {type: string, format: date-time}
     CreatePassResponse:
@@ -134,13 +235,156 @@ components:
         status: {$ref: '#/components/schemas/PassStatus'}
         expiresAt: {type: string, format: date-time}
         publicUrl: {type: string, format: uri}
-        categories: {type: array, items: {$ref: '#/components/schemas/ShareCategory'}}
+        categories:
+          type: array
+          description: Authoritative categories persisted on the issued pass.
+          items: {$ref: '#/components/schemas/ShareCategory'}
     ShareCategory:
       type: string
       enum: [DEMOGRAPHICS, ALLERGIES, MEDICATIONS, CONDITIONS, EMERGENCY_CONTACT]
+    ResponderVerificationMethod:
+      type: string
+      enum: [PHONE_OTP, EMERGENCY_OVERRIDE, AADHAAR_OFFLINE, ORGANIZATION_SSO, PASSKEY]
+      description: >
+        PHONE_OTP verifies control of the supplied mobile number but does not independently
+        verify the responder's legal name. AADHAAR_OFFLINE, ORGANIZATION_SSO, and PASSKEY
+        are reserved contract values for future stronger identity integrations.
+    ResponderVerificationStartRequest:
+      type: object
+      required: [name, phone]
+      properties:
+        name: {type: string, maxLength: 120, description: Self-declared responder name}
+        role: {type: string, maxLength: 80, nullable: true}
+        organization: {type: string, maxLength: 120, nullable: true}
+        phone: {type: string, description: E.164 mobile number, example: "+15550010199"}
+    ResponderVerificationStartResponse:
+      type: object
+      required: [challengeId, maskedPhone, expiresAt, deliveryMode]
+      properties:
+        challengeId: {type: string, format: uuid}
+        maskedPhone: {type: string, example: "••••0199"}
+        expiresAt: {type: string, format: date-time}
+        deliveryMode: {type: string, description: SMS in production or DEVELOPMENT for the local capstone provider}
+        developmentCode:
+          type: string
+          nullable: true
+          description: Present only for the development provider; no real SMS is sent in that mode.
+    ResponderVerificationConfirmRequest:
+      type: object
+      required: [challengeId, code]
+      properties:
+        challengeId: {type: string, format: uuid}
+        code: {type: string}
+    ResponderEmergencyOverrideRequest:
+      type: object
+      required: [name, reason]
+      properties:
+        name: {type: string, maxLength: 120, description: Self-declared responder name}
+        role: {type: string, maxLength: 80, nullable: true}
+        organization: {type: string, maxLength: 120, nullable: true}
+        reason: {type: string, maxLength: 200}
+    ResponderVerificationSessionResponse:
+      type: object
+      required: [verificationToken, verificationMethod, responderName, expiresAt]
+      properties:
+        verificationToken: {type: string, description: Opaque short-lived token; do not persist in browser storage}
+        verificationMethod: {$ref: '#/components/schemas/ResponderVerificationMethod'}
+        responderName: {type: string}
+        maskedPhone: {type: string, nullable: true}
+        expiresAt: {type: string, format: date-time}
+    PublicPassResponse:
+      type: object
+      required: [passId, expiresAt, categories, accessTraceCode, responderDevice, responderName, responderVerificationMethod]
+      properties:
+        passId: {type: string, format: uuid}
+        expiresAt: {type: string, format: date-time}
+        categories: {type: array, items: {$ref: '#/components/schemas/ShareCategory'}}
+        demographics: {type: object, nullable: true, additionalProperties: true}
+        allergies: {type: array, nullable: true, items: {type: object, additionalProperties: true}}
+        medications: {type: array, nullable: true, items: {type: object, additionalProperties: true}}
+        conditions: {type: array, nullable: true, items: {type: object, additionalProperties: true}}
+        emergencyContact: {type: object, nullable: true, additionalProperties: true}
+        accessTraceCode: {type: string, example: MP-EA7A788B42F940BC}
+        responderDevice: {type: string, example: "iPhone · Safari"}
+        responderName: {type: string}
+        responderRole: {type: string, nullable: true}
+        responderOrganization: {type: string, nullable: true}
+        responderPhoneLast4: {type: string, nullable: true, minLength: 4, maxLength: 4}
+        responderVerificationMethod: {$ref: '#/components/schemas/ResponderVerificationMethod'}
+        responderVerificationNote:
+          type: string
+          nullable: true
+          description: Assurance note such as development OTP simulation; absent for normal production SMS verification.
+    AccessLogResponse:
+      type: object
+      required: [id, outcome, accessedAt]
+      properties:
+        id: {type: string, format: uuid}
+        passId: {type: string, format: uuid, nullable: true}
+        outcome: {$ref: '#/components/schemas/AccessOutcome'}
+        traceCode: {type: string, nullable: true}
+        responderDevice: {type: string, nullable: true}
+        responderName: {type: string, nullable: true}
+        responderRole: {type: string, nullable: true}
+        responderOrganization: {type: string, nullable: true}
+        responderPhoneLast4: {type: string, nullable: true}
+        verificationMethod: {$ref: '#/components/schemas/ResponderVerificationMethod'}
+        verificationNote: {type: string, nullable: true}
+        accessedAt: {type: string, format: date-time}
     PassStatus:
       type: string
       enum: [ACTIVE, REVOKED, EXPIRED]
     AccessOutcome:
       type: string
       enum: [SUCCESS, EXPIRED, REVOKED, INVALID]
+    AdminMetricsResponse:
+      type: object
+      required: [totalUsers, totalPasses, activePasses, revokedPasses, expiredPasses, totalAccessLogs, successfulAccesses, expiredAccessAttempts, revokedAccessAttempts, invalidAccessAttempts, generatedAt]
+      properties:
+        totalUsers: {type: integer, format: int64}
+        totalPasses: {type: integer, format: int64}
+        activePasses: {type: integer, format: int64}
+        revokedPasses: {type: integer, format: int64}
+        expiredPasses: {type: integer, format: int64}
+        totalAccessLogs: {type: integer, format: int64}
+        successfulAccesses: {type: integer, format: int64}
+        expiredAccessAttempts: {type: integer, format: int64}
+        revokedAccessAttempts: {type: integer, format: int64}
+        invalidAccessAttempts: {type: integer, format: int64}
+        generatedAt: {type: string, format: date-time}
+    AdminPassSummaryResponse:
+      type: object
+      required: [passId, userId, status, expiresAt, categories, createdAt]
+      properties:
+        passId: {type: string, format: uuid}
+        userId: {type: string, format: uuid}
+        status: {$ref: '#/components/schemas/PassStatus'}
+        expiresAt: {type: string, format: date-time}
+        categories: {type: array, items: {$ref: '#/components/schemas/ShareCategory'}}
+        createdAt: {type: string, format: date-time}
+        revokedAt: {type: string, format: date-time, nullable: true}
+    AdminAccessLogResponse:
+      type: object
+      required: [id, outcome, accessedAt]
+      properties:
+        id: {type: string, format: uuid}
+        passId: {type: string, format: uuid, nullable: true}
+        userId: {type: string, format: uuid, nullable: true}
+        outcome: {$ref: '#/components/schemas/AccessOutcome'}
+        correlationId: {type: string, nullable: true}
+        traceCode: {type: string, nullable: true}
+        responderDevice: {type: string, nullable: true}
+        responderName: {type: string, nullable: true}
+        responderRole: {type: string, nullable: true}
+        responderOrganization: {type: string, nullable: true}
+        responderPhoneLast4: {type: string, nullable: true}
+        verificationMethod: {$ref: '#/components/schemas/ResponderVerificationMethod'}
+        verificationNote: {type: string, nullable: true}
+        accessedAt: {type: string, format: date-time}
+    SyntheaImportResponse:
+      type: object
+      required: [resourcesReceived, status, message]
+      properties:
+        resourcesReceived: {type: integer}
+        status: {type: string}
+        message: {type: string}
