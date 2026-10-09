@@ -1,6 +1,7 @@
 import React from 'react';
 import { Tabs, Redirect } from 'expo-router';
 import { Text, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../hooks/useAuth';
 import { LoadingSpinner } from '../../components';
 
@@ -39,6 +40,13 @@ export default function AppLayout() {
         options={{
           title: 'Dashboard',
           headerTitle: 'MediPass Patient Hub',
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons
+              name={focused ? 'home' : 'home-outline'}
+              size={size}
+              color={color}
+            />
+          ),
           tabBarLabel: ({ color }) => (
             <Text style={[styles.tabLabel, { color }]}>Dashboard</Text>
           ),
@@ -49,6 +57,13 @@ export default function AppLayout() {
         options={{
           title: 'Profile',
           headerShown: false,
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons
+              name={focused ? 'person' : 'person-outline'}
+              size={size}
+              color={color}
+            />
+          ),
           tabBarLabel: ({ color }) => (
             <Text style={[styles.tabLabel, { color }]}>Profile</Text>
           ),
@@ -59,6 +74,13 @@ export default function AppLayout() {
         options={{
           title: 'Sharing',
           headerTitle: 'Sharing Preferences',
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons
+              name={focused ? 'share-social' : 'share-social-outline'}
+              size={size}
+              color={color}
+            />
+          ),
           tabBarLabel: ({ color }) => (
             <Text style={[styles.tabLabel, { color }]}>Sharing</Text>
           ),
@@ -69,6 +91,13 @@ export default function AppLayout() {
         options={{
           title: 'Passes',
           headerTitle: 'Active Emergency Passes',
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons
+              name={focused ? 'qr-code' : 'qr-code-outline'}
+              size={size}
+              color={color}
+            />
+          ),
           tabBarLabel: ({ color }) => (
             <Text style={[styles.tabLabel, { color }]}>Passes</Text>
           ),
