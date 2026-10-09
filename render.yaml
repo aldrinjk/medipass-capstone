@@ -35,9 +35,9 @@ services:
       - key: SMS_RELAY_SHARED_KEY
         sync: false
       - key: PUBLIC_RESPONDER_WEB_BASE_URL
-        value: https://medipass-responder-aldrinjk.onrender.com
+        value: https://medipass-responder-web-aldrinjk.onrender.com
       - key: CORS_ALLOWED_ORIGINS
-        value: https://medipass-responder-aldrinjk.onrender.com
+        value: https://medipass-responder-web-aldrinjk.onrender.com
 
   - type: web
     name: medipass-responder-web-aldrinjk
