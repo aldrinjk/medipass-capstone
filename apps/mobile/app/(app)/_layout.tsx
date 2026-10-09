@@ -1,5 +1,5 @@
 import React from 'react';
-import { Tabs, Redirect } from 'expo-router';
+import { Tabs, Redirect, useRouter } from 'expo-router';
 import { Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -7,6 +7,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { LoadingSpinner } from '../../components';
 
 export default function AppLayout() {
+  const router = useRouter();
   const { isAuthenticated, isLoading } = useAuth();
   const insets = useSafeAreaInsets();
 
@@ -59,6 +60,12 @@ export default function AppLayout() {
       />
       <Tabs.Screen
         name="profile"
+        listeners={{
+          tabPress: (event) => {
+            event.preventDefault();
+            router.replace('/(app)/profile');
+          },
+        }}
         options={{
           title: 'Profile',
           headerShown: false,
