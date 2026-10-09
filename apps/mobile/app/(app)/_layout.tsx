@@ -2,11 +2,13 @@ import React from 'react';
 import { Tabs, Redirect } from 'expo-router';
 import { Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../hooks/useAuth';
 import { LoadingSpinner } from '../../components';
 
 export default function AppLayout() {
   const { isAuthenticated, isLoading } = useAuth();
+  const insets = useSafeAreaInsets();
 
   if (isLoading) {
     return <LoadingSpinner message="Validating session..." />;
@@ -26,12 +28,15 @@ export default function AppLayout() {
         tabBarActiveTintColor: '#1E40AF',
         tabBarInactiveTintColor: '#6B7280',
         tabBarStyle: {
-          height: 60,
-          paddingBottom: 8,
+          height: 64 + insets.bottom,
+          paddingBottom: Math.max(insets.bottom, 8),
           paddingTop: 8,
           backgroundColor: '#FFFFFF',
           borderTopWidth: 1,
           borderTopColor: '#E5E7EB',
+        },
+        tabBarItemStyle: {
+          paddingVertical: 2,
         },
       }}
     >
