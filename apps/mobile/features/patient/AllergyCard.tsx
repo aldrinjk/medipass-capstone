@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Allergy } from '../../types/clinical';
-import { Card, Badge, Button } from '../../components';
+import { Card, Button } from '../../components';
 
 interface AllergyCardProps {
   allergy: Allergy;
@@ -14,27 +14,41 @@ export const AllergyCard: React.FC<AllergyCardProps> = ({
   onEdit,
   onDelete,
 }) => {
-  const getSeverityVariant = (severity?: string) => {
-    switch (severity) {
+  const severity = allergy.severity?.toUpperCase();
+
+  const getSeverityStyles = (value?: string) => {
+    switch (value) {
       case 'SEVERE':
-        return 'danger';
+        return {
+          badge: styles.severeBadge,
+          text: styles.severeText,
+        };
       case 'MODERATE':
-        return 'warning';
+        return {
+          badge: styles.moderateBadge,
+          text: styles.moderateText,
+        };
       case 'MILD':
       default:
-        return 'info';
+        return {
+          badge: styles.mildBadge,
+          text: styles.mildText,
+        };
     }
   };
+
+  const severityStyles = getSeverityStyles(severity);
 
   return (
     <Card>
       <View style={styles.header}>
         <Text style={styles.substance}>{allergy.substance}</Text>
-        {allergy.severity ? (
-          <Badge
-            label={allergy.severity}
-            variant={getSeverityVariant(allergy.severity)}
-          />
+        {severity ? (
+          <View style={[styles.severityBadge, severityStyles.badge]}>
+            <Text style={[styles.severityText, severityStyles.text]}>
+              {severity}
+            </Text>
+          </View>
         ) : null}
       </View>
 
@@ -76,6 +90,37 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     color: '#111827',
+    flex: 1,
+    paddingRight: 12,
+  },
+  severityBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    alignSelf: 'flex-start',
+  },
+  severityText: {
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.2,
+  },
+  mildBadge: {
+    backgroundColor: '#DCFCE7',
+  },
+  mildText: {
+    color: '#166534',
+  },
+  moderateBadge: {
+    backgroundColor: '#FEF3C7',
+  },
+  moderateText: {
+    color: '#92400E',
+  },
+  severeBadge: {
+    backgroundColor: '#FEE2E2',
+  },
+  severeText: {
+    color: '#B91C1C',
   },
   detailRow: {
     flexDirection: 'row',
