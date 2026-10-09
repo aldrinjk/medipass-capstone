@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -28,6 +28,7 @@ export default function MedicationsScreen() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingMed, setEditingMed] = useState<Medication | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const submitLockRef = useRef(false);
 
   const handleOpenAdd = () => {
     setEditingMed(null);
@@ -57,6 +58,11 @@ export default function MedicationsScreen() {
   };
 
   const handleModalSubmit = async (data: MedicationFormData): Promise<boolean> => {
+    if (submitLockRef.current) {
+      return false;
+    }
+
+    submitLockRef.current = true;
     setIsSubmitting(true);
     try {
       if (editingMed) {
@@ -73,6 +79,7 @@ export default function MedicationsScreen() {
         });
       }
     } finally {
+      submitLockRef.current = false;
       setIsSubmitting(false);
     }
   };
