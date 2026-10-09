@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -28,6 +28,7 @@ export default function AllergiesScreen() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingAllergy, setEditingAllergy] = useState<Allergy | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const submitLockRef = useRef(false);
 
   const handleOpenAdd = () => {
     setEditingAllergy(null);
@@ -57,6 +58,11 @@ export default function AllergiesScreen() {
   };
 
   const handleModalSubmit = async (data: AllergyFormData): Promise<boolean> => {
+    if (submitLockRef.current) {
+      return false;
+    }
+
+    submitLockRef.current = true;
     setIsSubmitting(true);
     try {
       if (editingAllergy) {
@@ -73,6 +79,7 @@ export default function AllergiesScreen() {
         });
       }
     } finally {
+      submitLockRef.current = false;
       setIsSubmitting(false);
     }
   };

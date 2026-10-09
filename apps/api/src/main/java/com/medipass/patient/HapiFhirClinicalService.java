@@ -33,11 +33,18 @@ import org.hl7.fhir.r4.model.StringType;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 @Service
@@ -50,9 +57,23 @@ public class HapiFhirClinicalService implements ClinicalService {
             "https://medipass.local/fhir/StructureDefinition/gender-text";
     private static final String ALLERGY_SEVERITY_TEXT_URL =
             "https://medipass.local/fhir/StructureDefinition/allergy-severity-text";
+    private static final Duration RECENT_WRITE_TTL = Duration.ofMinutes(5);
 
     private final IGenericClient client;
     private final FhirContext fhirContext;
+
+    /*
+     * The public HAPI demo server can take time to reflect a successful write
+     * in search results. Keep a short-lived read-your-writes cache so a record
+     * that HAPI already accepted does not disappear from MediPass (or the
+     * responder view) while HAPI's search index catches up.
+     */
+    private final ConcurrentMap<UUID, ConcurrentMap<UUID, RecentWrite<AllergyDto>>>
+            recentAllergyWrites = new ConcurrentHashMap<>();
+    private final ConcurrentMap<UUID, ConcurrentMap<UUID, RecentWrite<MedicationDto>>>
+            recentMedicationWrites = new ConcurrentHashMap<>();
+    private final ConcurrentMap<UUID, ConcurrentMap<UUID, RecentWrite<ConditionDto>>>
+            recentConditionWrites = new ConcurrentHashMap<>();
 
     public HapiFhirClinicalService(IGenericClient client, FhirContext fhirContext) {
         this.client = client;
@@ -93,16 +114,22 @@ public class HapiFhirClinicalService implements ClinicalService {
 
     @Override
     public List<AllergyDto> getAllergies(UUID userId) {
-        return withFhir(() ->
-                searchByPatient(
-                        "AllergyIntolerance",
-                        patientLogicalId(userId),
-                        AllergyIntolerance.class
-                )
-                        .stream()
-                        .map(this::toAllergyDto)
-                        .toList()
-        );
+        return withFhir(() -> {
+            List<AllergyDto> serverItems = searchByPatient(
+                    "AllergyIntolerance",
+                    patientLogicalId(userId),
+                    AllergyIntolerance.class
+            )
+                    .stream()
+                    .map(this::toAllergyDto)
+                    .toList();
+            return mergeRecentWrites(
+                    userId,
+                    serverItems,
+                    recentAllergyWrites,
+                    AllergyDto::id
+            );
+        });
     }
 
     @Override
@@ -115,7 +142,9 @@ public class HapiFhirClinicalService implements ClinicalService {
             resource.setPatient(patientReference(userId));
             applyAllergy(resource, request);
             update(resource);
-            return toAllergyDto(resource);
+            AllergyDto created = toAllergyDto(resource);
+            rememberRecentWrite(userId, created, recentAllergyWrites, AllergyDto::id);
+            return created;
         });
     }
 
@@ -127,7 +156,9 @@ public class HapiFhirClinicalService implements ClinicalService {
             );
             applyAllergy(resource, request);
             update(resource);
-            return toAllergyDto(resource);
+            AllergyDto updated = toAllergyDto(resource);
+            rememberRecentWrite(userId, updated, recentAllergyWrites, AllergyDto::id);
+            return updated;
         });
     }
 
@@ -138,21 +169,28 @@ public class HapiFhirClinicalService implements ClinicalService {
                     "AllergyIntolerance", allergyId, AllergyIntolerance.class, userId
             );
             client.delete().resourceById(resource.getIdElement()).execute();
+            forgetRecentWrite(userId, allergyId, recentAllergyWrites);
         });
     }
 
     @Override
     public List<MedicationDto> getMedications(UUID userId) {
-        return withFhir(() ->
-                searchByPatient(
-                        "MedicationStatement",
-                        patientLogicalId(userId),
-                        MedicationStatement.class
-                )
-                        .stream()
-                        .map(this::toMedicationDto)
-                        .toList()
-        );
+        return withFhir(() -> {
+            List<MedicationDto> serverItems = searchByPatient(
+                    "MedicationStatement",
+                    patientLogicalId(userId),
+                    MedicationStatement.class
+            )
+                    .stream()
+                    .map(this::toMedicationDto)
+                    .toList();
+            return mergeRecentWrites(
+                    userId,
+                    serverItems,
+                    recentMedicationWrites,
+                    MedicationDto::id
+            );
+        });
     }
 
     @Override
@@ -166,7 +204,9 @@ public class HapiFhirClinicalService implements ClinicalService {
             resource.setStatus(MedicationStatement.MedicationStatementStatus.ACTIVE);
             applyMedication(resource, request);
             update(resource);
-            return toMedicationDto(resource);
+            MedicationDto created = toMedicationDto(resource);
+            rememberRecentWrite(userId, created, recentMedicationWrites, MedicationDto::id);
+            return created;
         });
     }
 
@@ -178,7 +218,9 @@ public class HapiFhirClinicalService implements ClinicalService {
             );
             applyMedication(resource, request);
             update(resource);
-            return toMedicationDto(resource);
+            MedicationDto updated = toMedicationDto(resource);
+            rememberRecentWrite(userId, updated, recentMedicationWrites, MedicationDto::id);
+            return updated;
         });
     }
 
@@ -189,21 +231,28 @@ public class HapiFhirClinicalService implements ClinicalService {
                     "MedicationStatement", medicationId, MedicationStatement.class, userId
             );
             client.delete().resourceById(resource.getIdElement()).execute();
+            forgetRecentWrite(userId, medicationId, recentMedicationWrites);
         });
     }
 
     @Override
     public List<ConditionDto> getConditions(UUID userId) {
-        return withFhir(() ->
-                searchByPatient(
-                        "Condition",
-                        patientLogicalId(userId),
-                        Condition.class
-                )
-                        .stream()
-                        .map(this::toConditionDto)
-                        .toList()
-        );
+        return withFhir(() -> {
+            List<ConditionDto> serverItems = searchByPatient(
+                    "Condition",
+                    patientLogicalId(userId),
+                    Condition.class
+            )
+                    .stream()
+                    .map(this::toConditionDto)
+                    .toList();
+            return mergeRecentWrites(
+                    userId,
+                    serverItems,
+                    recentConditionWrites,
+                    ConditionDto::id
+            );
+        });
     }
 
     @Override
@@ -216,7 +265,9 @@ public class HapiFhirClinicalService implements ClinicalService {
             resource.setSubject(patientReference(userId));
             applyCondition(resource, request);
             update(resource);
-            return toConditionDto(resource);
+            ConditionDto created = toConditionDto(resource);
+            rememberRecentWrite(userId, created, recentConditionWrites, ConditionDto::id);
+            return created;
         });
     }
 
@@ -228,7 +279,9 @@ public class HapiFhirClinicalService implements ClinicalService {
             );
             applyCondition(resource, request);
             update(resource);
-            return toConditionDto(resource);
+            ConditionDto updated = toConditionDto(resource);
+            rememberRecentWrite(userId, updated, recentConditionWrites, ConditionDto::id);
+            return updated;
         });
     }
 
@@ -239,6 +292,7 @@ public class HapiFhirClinicalService implements ClinicalService {
                     "Condition", conditionId, Condition.class, userId
             );
             client.delete().resourceById(resource.getIdElement()).execute();
+            forgetRecentWrite(userId, conditionId, recentConditionWrites);
         });
     }
 
@@ -639,6 +693,84 @@ public class HapiFhirClinicalService implements ClinicalService {
         bundle.addEntry()
                 .setFullUrl(resource.getIdElement().toUnqualifiedVersionless().getValue())
                 .setResource(resource);
+    }
+
+    private <T> void rememberRecentWrite(
+            UUID userId,
+            T item,
+            ConcurrentMap<UUID, ConcurrentMap<UUID, RecentWrite<T>>> store,
+            Function<T, UUID> idExtractor
+    ) {
+        store.computeIfAbsent(userId, ignored -> new ConcurrentHashMap<>())
+                .put(idExtractor.apply(item), new RecentWrite<>(item, Instant.now()));
+    }
+
+    private <T> void forgetRecentWrite(
+            UUID userId,
+            UUID itemId,
+            ConcurrentMap<UUID, ConcurrentMap<UUID, RecentWrite<T>>> store
+    ) {
+        ConcurrentMap<UUID, RecentWrite<T>> recent = store.get(userId);
+        if (recent == null) {
+            return;
+        }
+        recent.remove(itemId);
+        if (recent.isEmpty()) {
+            store.remove(userId, recent);
+        }
+    }
+
+    private <T> List<T> mergeRecentWrites(
+            UUID userId,
+            List<T> serverItems,
+            ConcurrentMap<UUID, ConcurrentMap<UUID, RecentWrite<T>>> store,
+            Function<T, UUID> idExtractor
+    ) {
+        ConcurrentMap<UUID, RecentWrite<T>> recent = store.get(userId);
+        if (recent == null || recent.isEmpty()) {
+            return serverItems;
+        }
+
+        Instant cutoff = Instant.now().minus(RECENT_WRITE_TTL);
+        recent.entrySet().removeIf(entry -> entry.getValue().writtenAt().isBefore(cutoff));
+        if (recent.isEmpty()) {
+            store.remove(userId, recent);
+            return serverItems;
+        }
+
+        Set<UUID> serverIds = new HashSet<>();
+        List<T> merged = new ArrayList<>(serverItems.size() + recent.size());
+
+        for (T serverItem : serverItems) {
+            UUID id = idExtractor.apply(serverItem);
+            serverIds.add(id);
+
+            RecentWrite<T> pending = recent.get(id);
+            if (pending == null) {
+                merged.add(serverItem);
+            } else if (pending.item().equals(serverItem)) {
+                recent.remove(id, pending);
+                merged.add(serverItem);
+            } else {
+                // HAPI search is still returning an older indexed version.
+                merged.add(pending.item());
+            }
+        }
+
+        for (var entry : recent.entrySet()) {
+            if (!serverIds.contains(entry.getKey())) {
+                merged.add(entry.getValue().item());
+            }
+        }
+
+        if (recent.isEmpty()) {
+            store.remove(userId, recent);
+        }
+
+        return List.copyOf(merged);
+    }
+
+    private record RecentWrite<T>(T item, Instant writtenAt) {
     }
 
     private String encode(String value) {
